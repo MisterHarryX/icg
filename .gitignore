@@ -46,3 +46,8 @@ next-env.d.ts
 
 # production admin credentials (local copy)
 .vercel-admin.local
+
+# AI assistant files (local only)
+/.claude/
+/CLAUDE.md
+/AGENTS.md
