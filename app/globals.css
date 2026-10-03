@@ -1,26 +1,1011 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ------------------------------------------------------------------ */
+/* Design tokens                                                        */
+/* ------------------------------------------------------------------ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  --color-bg: #060608;
+  --color-bg-soft: #0a0a0d;
+  --color-surface: #0f0f13;
+  --color-surface-2: #14141a;
+  --color-surface-3: #1a1a21;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --color-fg: #f3f4f7;
+  --color-fg-2: #9a9caa;
+  --color-fg-3: #62646f;
+
+  --color-line: rgb(255 255 255 / 0.07);
+  --color-line-soft: rgb(255 255 255 / 0.045);
+  --color-line-strong: rgb(255 255 255 / 0.12);
+
+  --color-cyan: #3cc8ff;
+  --color-blue: #3a7bff;
+  --color-deep: #2b45e0;
+  --color-violet: #8b5cf6;
+
+  --color-good: #4fd1b4;
+  --color-fair: #f2b84b;
+  --color-weak: #f07a6a;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --font-brand: var(--font-michroma), var(--font-inter), ui-sans-serif, sans-serif;
+  /* Headings follow the body font unless admin mode picks a separate one. */
+  --font-heading: var(--font-sans);
+
+  --text-3xs: 0.5rem;
+  --text-3xs--line-height: 1.4;
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1.4;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-float: float 9s ease-in-out infinite;
+  --animate-float-slow: float 12s ease-in-out infinite;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -10px, 0);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  color-scheme: dark;
+  --gradient-brand: linear-gradient(120deg, #3cc8ff 0%, #3a7bff 45%, #8b5cf6 100%);
+  --header-h: 64px;
+  --dur-enter: 700ms;
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                 */
+/* ------------------------------------------------------------------ */
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    scroll-padding-top: calc(var(--header-h) + 16px);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: clip;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+  }
+
+  ::selection {
+    background: rgb(58 123 255 / 0.35);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cyan);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Utilities                                                            */
+/* ------------------------------------------------------------------ */
+
+@utility text-gradient {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility container-page {
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+  padding-inline: 20px;
+
+  @media (width >= 640px) {
+    padding-inline: 32px;
+  }
+}
+
+/* Small section label: plain sentence case, no mono / wide tracking. */
+@utility eyebrow {
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 500;
+  color: var(--color-fg-3);
+}
+
+@utility heading-xl {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  font-size: clamp(2.5rem, 1.7rem + 3.6vw, 4.5rem);
+}
+
+@utility heading-lg {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+  font-size: clamp(2rem, 1.35rem + 2.6vw, 3.25rem);
+}
+
+@utility heading-md {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  font-size: clamp(1.15rem, 1.05rem + 0.4vw, 1.375rem);
+}
+
+/* Soft card surface: slightly brighter than the page, hairline border. */
+@utility card {
+  position: relative;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.028), rgb(255 255 255 / 0.012));
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+
+/* Faint grid used behind hero and final CTA. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reveal on scroll                                                     */
+/* Only hides content when scripting is enabled (the observer will      */
+/* reveal it); without JS — or in older browsers — it is simply shown.  */
+/* ------------------------------------------------------------------ */
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    filter: blur(6px);
+    transition:
+      opacity var(--dur-enter) var(--ease-out-soft),
+      transform var(--dur-enter) var(--ease-out-soft),
+      filter var(--dur-enter) var(--ease-out-soft);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  [data-reveal="fade"] {
+    transform: none;
+  }
+
+  [data-reveal][data-revealed] {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* Above-the-fold intro: pure CSS on load, never waits for hydration. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-intro] {
+    animation: intro 0.9s var(--ease-out-soft) backwards;
+    animation-delay: var(--reveal-delay, 0ms);
+  }
+
+  [data-intro="fade"] {
+    animation-name: intro-fade;
+    animation-duration: 1.4s;
+  }
+}
+
+@keyframes intro {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+    filter: blur(6px);
+  }
+}
+
+@keyframes intro-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Scaled mockups                                                       */
+/* Mockup content is authored in "u" units (1u = 1/80 of frame width),  */
+/* so a whole website preview scales proportionally at any size         */
+/* without JavaScript. Tailwind spacing/text/radius tokens are remapped */
+/* to that unit inside .mock-canvas.                                    */
+/* ------------------------------------------------------------------ */
+
+.mock {
+  container-type: inline-size;
+}
+
+.mock-canvas {
+  --u: calc(100cqw / var(--mock-w, 80));
+  --spacing: calc(var(--u) * 0.25);
+  --text-3xs: calc(var(--u) * 0.5);
+  --text-2xs: calc(var(--u) * 0.625);
+  --text-xs: calc(var(--u) * 0.75);
+  --text-sm: calc(var(--u) * 0.875);
+  --text-base: var(--u);
+  --text-lg: calc(var(--u) * 1.125);
+  --text-xl: calc(var(--u) * 1.25);
+  --text-2xl: calc(var(--u) * 1.5);
+  --text-3xl: calc(var(--u) * 1.875);
+  --text-4xl: calc(var(--u) * 2.25);
+  --text-5xl: calc(var(--u) * 3);
+  --text-6xl: calc(var(--u) * 3.75);
+  --text-7xl: calc(var(--u) * 4.5);
+  --radius-xs: calc(var(--u) * 0.125);
+  --radius-sm: calc(var(--u) * 0.25);
+  --radius-md: calc(var(--u) * 0.375);
+  --radius-lg: calc(var(--u) * 0.5);
+  --radius-xl: calc(var(--u) * 0.75);
+  --radius-2xl: calc(var(--u) * 1);
+  --radius-3xl: calc(var(--u) * 1.5);
+  font-size: var(--u);
+  line-height: 1.4;
+}
+
+/* Header scroll progress (CSS scroll-driven, no JS). */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .scroll-progress {
+      display: block;
+      transform-origin: 0 50%;
+      animation: scroll-progress linear both;
+      animation-timeline: scroll(root);
+    }
+  }
+}
+
+@keyframes scroll-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Slow drifting glow used behind mockups. */
+@keyframes glow-drift {
+  0%,
+  100% {
+    transform: translate3d(-4%, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, -3%, 0) scale(1.06);
+  }
+}
+
+.glow-drift {
+  animation: glow-drift 16s ease-in-out infinite;
+}
+
+/* Contact backdrop: slow, low-amplitude drift (transform only, ~30s cycle).
+   Scale stays above 1 so the blurred photo never shows its edges. */
+@media (prefers-reduced-motion: no-preference) {
+  .photo-drift {
+    animation: photo-drift 28s ease-in-out infinite alternate;
+  }
+
+  .photo-drift-alt {
+    animation-duration: 34s;
+    animation-direction: alternate-reverse;
+  }
+}
+
+.photo-drift {
+  transform: scale(1.1);
+}
+
+@keyframes photo-drift {
+  from {
+    transform: scale(1.08) translate3d(-2%, 1%, 0);
+  }
+  to {
+    transform: scale(1.16) translate3d(2%, -2%, 0);
+  }
+}
+
+/* Contact heading: a line lights up while the pointer is over it. */
+.glow-line {
+  transition:
+    color 400ms ease,
+    text-shadow 500ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .glow-line:hover {
+    color: var(--color-fg);
+    text-shadow:
+      0 0 18px rgb(255 255 255 / 0.4),
+      0 0 56px rgb(120 160 255 / 0.3);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero pillars: expandable panels + cursor light.                      */
+/* ------------------------------------------------------------------ */
+
+/* Height via grid rows (0fr → 1fr): no JS measuring. Close is faster than open. */
+.pillar-panel {
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.pillar-panel[data-open] {
+  grid-template-rows: 1fr;
+  transition-duration: 480ms;
+}
+
+.pillar-content > * {
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.pillar-panel[data-open] .pillar-content > * {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 400ms var(--ease-out-soft),
+    transform 500ms var(--ease-out-soft);
+  transition-delay: calc(140ms + var(--i, 0) * 70ms);
+}
+
+.spotlight {
+  background: radial-gradient(
+    380px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgb(255 255 255 / 0.055),
+    transparent 70%
+  );
+}
+
+@media (hover: none) {
+  .spotlight {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Services scenes: 2s mini stories, played by [data-play] on the card. */
+/* Resting state = first frame; `both` keeps the last frame afterwards.  */
+/* ------------------------------------------------------------------ */
+
+.svc-num {
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(255 255 255 / 0.1);
+  transition: -webkit-text-stroke-color 400ms ease;
+}
+
+.svc-card:hover .svc-num {
+  -webkit-text-stroke-color: rgb(255 255 255 / 0.3);
+}
+
+.svc-toast {
+  opacity: 0;
+  transform: translate3d(0, 6px, 0);
+}
+
+.svc-booked {
+  opacity: 0;
+}
+
+.svc-after {
+  clip-path: inset(0 100% 0 0);
+}
+
+.svc-divider-track {
+  opacity: 0;
+}
+
+.svc-cursor {
+  transform-origin: 0 0;
+}
+
+/* 01 — cursor travels to the button, clicks, a toast confirms. */
+.svc-card[data-play] .svc-cursor-track {
+  animation: svc-cursor-move 2000ms cubic-bezier(0.77, 0, 0.175, 1) both;
+}
+
+.svc-card[data-play] .svc-cursor {
+  animation: svc-click 2000ms ease both;
+}
+
+.svc-card[data-play] .svc-cta {
+  animation: svc-press 2000ms ease both;
+}
+
+.svc-card[data-play] .svc-toast {
+  animation: svc-toast 2000ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes svc-cursor-move {
+  0% {
+    transform: none;
+  }
+  45%,
+  100% {
+    transform: translate(-58%, -16%);
+  }
+}
+
+@keyframes svc-click {
+  0%,
+  48% {
+    transform: scale(1);
+  }
+  54% {
+    transform: scale(0.8);
+  }
+  62%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes svc-press {
+  0%,
+  48% {
+    transform: scale(1);
+  }
+  54% {
+    transform: scale(0.92);
+  }
+  62%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes svc-toast {
+  0%,
+  60% {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+  78%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 02 — the selection walks 10:00 → 12:30 → 14:30 and books it. */
+.svc-card[data-play] .svc-slot {
+  animation: svc-slot 2000ms cubic-bezier(0.77, 0, 0.175, 1) both;
+}
+
+.svc-card[data-play] .svc-booked {
+  animation: svc-fade 2000ms ease both;
+}
+
+@keyframes svc-slot {
+  0%,
+  12% {
+    transform: none;
+  }
+  32%,
+  44% {
+    transform: translateX(calc(100% + 6px));
+  }
+  66%,
+  100% {
+    transform: translateY(calc(100% + 6px));
+  }
+}
+
+@keyframes svc-fade {
+  0%,
+  70% {
+    opacity: 0;
+  }
+  85%,
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 03 — a divider sweeps left → right, revealing the redesign. */
+.svc-card[data-play] .svc-after {
+  animation: svc-reveal 2000ms cubic-bezier(0.77, 0, 0.175, 1) both;
+}
+
+.svc-card[data-play] .svc-divider-track {
+  animation: svc-divider 2000ms cubic-bezier(0.77, 0, 0.175, 1) both;
+}
+
+@keyframes svc-reveal {
+  0%,
+  10% {
+    clip-path: inset(0 100% 0 0);
+  }
+  75%,
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes svc-divider {
+  0% {
+    opacity: 0;
+    transform: none;
+  }
+  10% {
+    opacity: 1;
+    transform: none;
+  }
+  75% {
+    opacity: 1;
+    transform: translateX(100%);
+  }
+  90%,
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Footer wordmark: outlined letters, lit from inside by the cursor.    */
+/* ------------------------------------------------------------------ */
+
+.footer-mark-text {
+  font-family: var(--font-brand);
+  font-size: clamp(88px, 23vw, 330px);
+  line-height: 0.82;
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: nowrap;
+  color: transparent;
+}
+
+.footer-mark-outline {
+  -webkit-text-stroke: 1px rgb(255 255 255 / 0.14);
+}
+
+.footer-mark-fill {
+  background: radial-gradient(
+    280px circle at var(--wx, 50%) var(--wy, 50%),
+    rgb(255 255 255 / 0.9),
+    rgb(90 130 255 / 0.55) 45%,
+    transparent 75%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* No cursor to follow: keep a faint, centered glow in the letters. */
+@media (hover: none) {
+  .footer-mark-fill {
+    opacity: 0.35;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero logo clip: dissolve its dark background into the page.          */
+/* `lighten` keeps the brighter pixel: the clip's near-black loses to   */
+/* the page color, the bright logo wins. The mask softens all edges.    */
+/* ------------------------------------------------------------------ */
+
+.hero-logo {
+  mix-blend-mode: lighten;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+
+/* Second axis on a nested element: no mask-composite needed (its per-layer
+   semantics differ between engines and build tools). */
+.hero-logo-v {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+}
+
+/* ------------------------------------------------------------------ */
+/* Navigation links: white hairline under the hovered / active item.    */
+/* Hover in: grows from the left. Hover out: exits to the right.        */
+/* ------------------------------------------------------------------ */
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: var(--nav-x, 10px);
+  right: var(--nav-x, 10px);
+  bottom: 2px;
+  height: 1px;
+  background: var(--color-fg);
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Header links: the line matches the link's side padding (px-2.5 → xl:px-3.5). */
+@media (width >= 1280px) {
+  header .nav-link {
+    --nav-x: 14px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+}
+
+.nav-link:focus-visible::after,
+.nav-link[aria-current]::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Express audit: laptop screen, panels and the glowing CTA.            */
+/* ------------------------------------------------------------------ */
+
+.laptop-glow {
+  background: radial-gradient(closest-side, rgb(58 123 255 / 0.3), rgb(58 123 255 / 0.08) 55%, transparent);
+}
+
+.audit-screen-in {
+  animation: audit-screen-in 450ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes audit-screen-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+.audit-panel-in,
+.audit-issue {
+  animation: audit-panel-in 450ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes audit-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+}
+
+/* Scan line sweeping down the screen while the audit runs. */
+.audit-scan {
+  animation: audit-scan 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes audit-scan {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(560%);
+  }
+}
+
+/* The CTA "burns" blue: a blurred layer behind it breathes slowly. */
+.audit-cta {
+  isolation: isolate;
+}
+
+.audit-cta::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: 10px;
+  background: rgb(58 123 255 / 0.6);
+  filter: blur(16px);
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .audit-cta::before {
+    animation: cta-glow 2.4s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes cta-glow {
+  from {
+    opacity: 0.35;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Process split: "Yes" ticks our checklist, "another way" reshuffles.  */
+/* ------------------------------------------------------------------ */
+
+.split-check {
+  color: var(--color-bg);
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+
+.split-check path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 150ms ease;
+}
+
+/* Ticking on is staggered (--d per item); ticking off stays instant. */
+.split-item[data-done] .split-check {
+  background-color: var(--color-fg);
+  border-color: var(--color-fg);
+  transition-delay: var(--d, 0ms);
+}
+
+.split-item[data-done] .split-check path {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 320ms cubic-bezier(0.23, 1, 0.32, 1) calc(var(--d, 0ms) + 100ms);
+}
+
+.split-shuffle .split-item {
+  animation: split-shuffle 520ms cubic-bezier(0.77, 0, 0.175, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@keyframes split-shuffle {
+  0% {
+    opacity: 1;
+    transform: none;
+  }
+  45% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  46% {
+    transform: translate3d(0, -8px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.split-reply {
+  animation: split-reply 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes split-reply {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Process: flat-lay desk scene (one color, drawn with strokes).        */
+/* ------------------------------------------------------------------ */
+
+.desk {
+  --sw: 1.5;
+}
+
+.desk :where(path, rect, circle) {
+  stroke-width: var(--sw);
+}
+
+/* Object bodies are filled with the stage color so they occlude what's below. */
+.desk .desk-body {
+  fill: var(--color-bg-soft);
+}
+
+.desk-obj {
+  transition: opacity 500ms ease;
+}
+
+.desk-obj[data-dim] {
+  opacity: 0.26;
+}
+
+/* Strokes draw in when their step is reached ([data-on]) and undraw when going back. */
+.desk-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 800ms cubic-bezier(0.77, 0, 0.175, 1) var(--d, 0ms);
+}
+
+[data-on] > .desk-draw {
+  stroke-dashoffset: 0;
+}
+
+.desk-appear {
+  opacity: 0;
+  transition: opacity 500ms ease var(--d, 0ms);
+}
+
+[data-on] > .desk-appear {
+  opacity: 1;
+}
+
+.desk-pen,
+.desk-cam {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+.desk-pen {
+  transition:
+    transform 900ms cubic-bezier(0.77, 0, 0.175, 1),
+    opacity 500ms ease;
+}
+
+/* Small writing strokes once the pen arrives (4 short passes, then still). */
+@media (prefers-reduced-motion: no-preference) {
+  .desk-pen-writing {
+    animation: pen-write 320ms ease-in-out 900ms 4 alternate;
+  }
+}
+
+@keyframes pen-write {
+  to {
+    transform: translate(-6px, 3px);
+  }
+}
+
+/* Phones get a 4:3 crop; the camera pans/zooms to the objects of the step. */
+@media (width < 768px) {
+  .desk {
+    --sw: 2;
+  }
+
+  .desk-cam {
+    transform: translate(var(--cam-x), var(--cam-y)) scale(var(--cam-s));
+    transition: transform 800ms cubic-bezier(0.77, 0, 0.175, 1);
+  }
+}
+
+/* Autoplay timer under the active step. */
+.process-timer {
+  animation: grow-x var(--timer, 4s) linear both;
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes scan {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(420%);
+  }
+}
+
+@keyframes result-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes bar-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes blink-old {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion: switch off decorative animation entirely.            */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Admin mode (only rendered for a signed-in admin)                    */
+/* ------------------------------------------------------------------ */
+
+.admin-bar-in {
+  animation: admin-bar-in 360ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes admin-bar-in {
+  from {
+    opacity: 0;
+    /* Tailwind's -translate-x-1/2 uses the `translate` property, so animate that. */
+    translate: -50% 14px;
+  }
+}
+
+.admin-pop-in {
+  animation: admin-pop-in 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes admin-pop-in {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+.admin-dialog[open] {
+  animation: admin-pop-in 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* Edit mode: everything under the cursor that can be edited gets a hand cursor. */
+html[data-admin-hover],
+html[data-admin-hover] * {
+  cursor: pointer !important;
 }
