@@ -5,6 +5,10 @@ const en: Messages = {
     title: "ICG — websites for business. Simpler than you think.",
     description:
       "ICG builds modern websites for beauty salons, barbershops and small businesses — from the first idea to launch. You tell us about your business; we handle the rest.",
+    /* Link previews (Telegram, WhatsApp, VK…): title, short line and the card text in app/[locale]/opengraph-image.tsx. */
+    ogTitle: "ICG — websites for business",
+    ogDescription: "Design. Development. Launch.",
+    ogImageText: "Websites for business",
   },
 
   nav: {

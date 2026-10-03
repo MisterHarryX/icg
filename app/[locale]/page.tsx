@@ -32,12 +32,19 @@ export async function generateMetadata({ params }: PageProps<"/[locale]">): Prom
       canonical: `/${locale}`,
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}`])),
     },
+    // Link previews (Telegram, WhatsApp, VK…). The image comes from ./opengraph-image.tsx.
     openGraph: {
-      title: t.meta.title,
-      description: t.meta.description,
+      title: t.meta.ogTitle,
+      description: t.meta.ogDescription,
+      url: `/${locale}`,
       locale: locale === "ru" ? "ru_RU" : "en_US",
       type: "website",
       siteName: "ICG",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t.meta.ogTitle,
+      description: t.meta.ogDescription,
     },
   };
 }

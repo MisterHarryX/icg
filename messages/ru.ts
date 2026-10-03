@@ -3,6 +3,10 @@ const ru = {
     title: "ICG — сайты для бизнеса. Проще, чем вы думаете.",
     description:
       "ICG делает современные сайты для салонов красоты, барбершопов и малого бизнеса — от идеи до запуска. Вы рассказываете о деле, остальное берём на себя.",
+    /* Link previews (Telegram, WhatsApp, VK…): title, short line and the card text in app/[locale]/opengraph-image.tsx. */
+    ogTitle: "ICG — сайты для бизнеса",
+    ogDescription: "Дизайн. Разработка. Запуск.",
+    ogImageText: "Сайты для бизнеса",
   },
 
   nav: {

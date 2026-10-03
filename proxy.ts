@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isLocale, matchLocale } from "@/lib/i18n/config";
+import { defaultLocale, isLocale, matchLocale } from "@/lib/i18n/config";
+
+const PREVIEW_BOTS = /TelegramBot|WhatsApp|vkShare|facebookexternalhit|Twitterbot|Slackbot|Discordbot|LinkedInBot|SkypeUriPreview|Viber|YandexBot|Googlebot/i;
 
 /** Redirects locale-less URLs (e.g. "/") to /ru or /en based on the browser language. */
 export function proxy(request: NextRequest) {
@@ -8,7 +10,10 @@ export function proxy(request: NextRequest) {
 
   if (isLocale(firstSegment)) return;
 
-  const locale = matchLocale(request.headers.get("accept-language"));
+  // Link-preview bots (Telegram, WhatsApp, VK…) rarely send a useful
+  // Accept-Language; give them the main (Russian) version.
+  const isPreviewBot = PREVIEW_BOTS.test(request.headers.get("user-agent") ?? "");
+  const locale = isPreviewBot ? defaultLocale : matchLocale(request.headers.get("accept-language"));
   const url = request.nextUrl.clone();
   url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
   return NextResponse.redirect(url);
