@@ -51,7 +51,8 @@ function useActiveSection() {
   return active;
 }
 
-export function Header({ locale, t }: { locale: Locale; t: NavCopy }) {
+/** `reviewsUrl` (Yandex Maps, set in admin mode → Контакты) adds an external "Отзывы" item. */
+export function Header({ locale, t, reviewsUrl }: { locale: Locale; t: NavCopy; reviewsUrl?: string }) {
   const scrolled = useScrolled();
   const active = useActiveSection();
   const [open, setOpen] = useState(false);
@@ -109,7 +110,8 @@ export function Header({ locale, t }: { locale: Locale; t: NavCopy }) {
         <nav aria-label={t.menu} className="hidden lg:block">
           <ul className="flex items-center">
             {HEADER_NAV.map((item) => (
-              <li key={item.id}>
+              // With the extra "Отзывы" item the row is too wide for 1024–1279px; the logo already links home.
+              <li key={item.id} className={reviewsUrl && item.id === SECTION_IDS.home ? "hidden xl:block" : undefined}>
                 {/* White hairline: draws in from the left on hover, leaves to the right; stays on the active section. */}
                 <a
                   href={`#${item.id}`}
@@ -120,6 +122,22 @@ export function Header({ locale, t }: { locale: Locale; t: NavCopy }) {
                 </a>
               </li>
             ))}
+            {reviewsUrl && (
+              <li>
+                <a
+                  href={reviewsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t.reviewsAria}
+                  className="nav-link relative flex items-center gap-1 px-2.5 py-2 text-[14px] whitespace-nowrap text-fg-2 transition-colors duration-200 hover:text-fg xl:px-3.5"
+                >
+                  {t.reviews}
+                  <svg viewBox="0 0 12 12" aria-hidden="true" className="size-2.5 opacity-60" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3.5 8.5 8.5 3.5M4.5 3.5h4v4" />
+                  </svg>
+                </a>
+              </li>
+            )}
           </ul>
         </nav>
 
@@ -187,6 +205,22 @@ export function Header({ locale, t }: { locale: Locale; t: NavCopy }) {
                   </a>
                 </li>
               ))}
+              {reviewsUrl && (
+                <li className="border-b border-line">
+                  <a
+                    href={reviewsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t.reviewsAria}
+                    onClick={() => close()}
+                    className="flex items-baseline gap-4 py-3.5 text-[26px] font-medium tracking-[-0.03em] text-fg-2 transition-colors hover:text-fg"
+                  >
+                    <span className="w-5 text-[13px] text-fg-3 tabular-nums">0{FULL_NAV.length + 1}</span>
+                    {t.reviews}
+                    <span aria-hidden="true" className="text-[18px] text-fg-3">↗</span>
+                  </a>
+                </li>
+              )}
             </ul>
           </nav>
           <div className="mt-auto flex flex-col gap-6 pt-8">

@@ -20,6 +20,8 @@ const en: Messages = {
     audit: "Audit",
     about: "About",
     contact: "Contact",
+    reviews: "Reviews",
+    reviewsAria: "Reviews on Yandex Maps (opens in a new tab)",
     cta: "Start a project",
     openMenu: "Open menu",
     closeMenu: "Close menu",

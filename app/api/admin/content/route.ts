@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminRequest, sameOrigin } from "@/lib/admin/auth";
-import { isValidPhone, parseTelegramUsername } from "@/lib/constants/contacts";
+import { isValidPhone, parseReviewsUrl, parseTelegramUsername } from "@/lib/constants/contacts";
 import { isFontId } from "@/lib/content/fonts";
 import { MEDIA_URL_PATTERN, isMediaId } from "@/lib/content/media";
 import { StorageUnavailableError, getFreshOverrides, getOverrides, saveOverrides } from "@/lib/content/overrides";
@@ -78,6 +78,13 @@ export async function PUT(request: NextRequest) {
   else if (typeof phone === "string") {
     if (!isValidPhone(phone)) return NextResponse.json({ error: "phone" }, { status: 400 });
     settings.phone = phone.trim();
+  }
+  const reviews = patch.settings?.reviews;
+  if (reviews === null || reviews === "") delete settings.reviews;
+  else if (typeof reviews === "string") {
+    const url = parseReviewsUrl(reviews);
+    if (!url) return NextResponse.json({ error: "reviews" }, { status: 400 });
+    settings.reviews = url;
   }
 
   try {

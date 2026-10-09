@@ -50,6 +50,17 @@ export function Footer({ locale, t, nav, contact, contacts }: {
                 </a>
               </li>
             ))}
+            {contacts.reviewsUrl && (
+              // Second column, right under "Контакты".
+              <li className="col-start-2">
+                <a href={contacts.reviewsUrl} target="_blank" rel="noopener noreferrer" aria-label={nav.reviewsAria} className={`${linkClass} inline-flex items-center gap-1`}>
+                  {nav.reviews}
+                  <svg viewBox="0 0 12 12" aria-hidden="true" className="size-2.5 opacity-60" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3.5 8.5 8.5 3.5M4.5 3.5h4v4" />
+                  </svg>
+                </a>
+              </li>
+            )}
           </ul>
         </nav>
 

@@ -22,7 +22,7 @@ type Drafts = {
   media: Partial<Record<MediaId, string | null>>;
   fonts: { sans?: FontId | null; heading?: FontId | null };
   /** Telegram username / phone; null = back to the default from the code. */
-  settings: { telegram?: string | null; phone?: string | null };
+  settings: { telegram?: string | null; phone?: string | null; reviews?: string | null };
 };
 
 const NO_DRAFTS: Drafts = { texts: {}, media: {}, fonts: {}, settings: {} };
@@ -116,6 +116,7 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
   const contacts = buildContacts({
     telegram: drafts.settings.telegram === undefined ? publishedSettings?.telegram : (drafts.settings.telegram ?? undefined),
     phone: drafts.settings.phone === undefined ? publishedSettings?.phone : (drafts.settings.phone ?? undefined),
+    reviews: drafts.settings.reviews === undefined ? publishedSettings?.reviews : (drafts.settings.reviews ?? undefined),
   });
 
   const draftCount =
@@ -164,13 +165,15 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
     applyText([{ path }], value);
   }
 
-  function applyContacts(telegram: string, phone: string) {
-    const next = buildContacts({ telegram, phone });
+  function applyContacts(telegram: string, phone: string, reviews: string) {
+    const next = buildContacts({ telegram, phone, reviews });
     // Live preview everywhere the contacts appear.
     replaceOnPage(`@${contacts.telegramUsername}`, `@${next.telegramUsername}`);
     replaceHref(contacts.telegramUrl, next.telegramUrl);
     replaceOnPage(contacts.phone, next.phone);
     replaceHref(contacts.phoneHref, next.phoneHref);
+    // An existing "Отзывы" button follows the new link; adding or removing it shows after publishing.
+    if (contacts.reviewsUrl && next.reviewsUrl) replaceHref(contacts.reviewsUrl, next.reviewsUrl);
 
     setDrafts((current) => {
       const settings = { ...current.settings };
@@ -183,6 +186,10 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
         if (value === live) delete settings[key];
         else settings[key] = value === fallback ? null : value;
       }
+      // Reviews link: no default; empty removes the button.
+      const reviewsLive = publishedSettings?.reviews ?? "";
+      if (reviews === reviewsLive) delete settings.reviews;
+      else settings.reviews = reviews || null;
       return { ...current, settings };
     });
   }
@@ -238,7 +245,9 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
         throw new Error(
           error === "telegram"
             ? "Проверьте Telegram: 4–32 латинских буквы, цифры или _."
-            : error === "phone"
+            : error === "reviews"
+              ? "Ссылка на отзывы должна вести на Яндекс Карты (https://yandex.ru/maps/…)."
+              : error === "phone"
               ? "Проверьте номер телефона."
               : error === "storage"
                 ? "Хранилище не подключено: правки нельзя сохранить."
@@ -437,7 +446,13 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
         />
       )}
       {panel === "contacts" && (
-        <ContactsPanel telegram={contacts.telegramUsername} phone={contacts.phone} onApply={applyContacts} onClose={() => setPanel(null)} />
+        <ContactsPanel
+          telegram={contacts.telegramUsername}
+          phone={contacts.phone}
+          reviews={contacts.reviewsUrl ?? ""}
+          onApply={applyContacts}
+          onClose={() => setPanel(null)}
+        />
       )}
       {panel === "texts" && <TextsPanel values={values} original={base} changed={changedTexts} onApply={applyFromList} onClose={() => setPanel(null)} />}
 

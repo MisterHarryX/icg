@@ -57,7 +57,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
 
   return (
     <MediaProvider media={overrides.media}>
-      <Header locale={locale} t={t.nav} />
+      <Header locale={locale} t={t.nav} reviewsUrl={contacts.reviewsUrl} />
       <main id="main" tabIndex={-1} className="outline-none">
         <Hero t={t.hero} aura={t.mockups.aura} />
         <Services t={t.services} />

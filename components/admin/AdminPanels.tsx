@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { isValidPhone, parseTelegramUsername } from "@/lib/constants/contacts";
+import { isValidPhone, parseReviewsUrl, parseTelegramUsername } from "@/lib/constants/contacts";
 import { FONT_OPTIONS, fontStack, type FontId } from "@/lib/content/fonts";
 import { MEDIA_SLOTS, type MediaId } from "@/lib/content/media";
 import { cn } from "@/lib/utils";
@@ -323,18 +323,23 @@ export function TextsPanel({
 export function ContactsPanel({
   telegram,
   phone,
+  reviews,
   onApply,
   onClose,
 }: {
   telegram: string;
   phone: string;
-  onApply: (telegram: string, phone: string) => void;
+  reviews: string;
+  onApply: (telegram: string, phone: string, reviews: string) => void;
   onClose: () => void;
 }) {
   const [telegramValue, setTelegramValue] = useState(`@${telegram}`);
   const [phoneValue, setPhoneValue] = useState(phone);
+  const [reviewsValue, setReviewsValue] = useState(reviews);
   const telegramName = parseTelegramUsername(telegramValue);
   const phoneOk = isValidPhone(phoneValue);
+  const reviewsUrl = reviewsValue.trim() ? parseReviewsUrl(reviewsValue) : "";
+  const reviewsOk = reviewsUrl !== null;
   const field =
     "mt-2 h-10 w-full rounded-[5px] border bg-bg/70 px-3 text-[16px] text-fg sm:text-[14px] focus:border-blue/70 focus:outline-none";
 
@@ -344,8 +349,8 @@ export function ContactsPanel({
         className="grid gap-4 p-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (telegramName && phoneOk) {
-            onApply(telegramName, phoneValue.trim());
+          if (telegramName && phoneOk && reviewsOk) {
+            onApply(telegramName, phoneValue.trim(), reviewsUrl ?? "");
             onClose();
           }
         }}
@@ -376,8 +381,26 @@ export function ContactsPanel({
           />
           {!phoneOk && <span className="mt-1.5 block text-[12px] text-weak">Проверьте номер</span>}
         </label>
+        <label className="block">
+          <span className="eyebrow">Отзывы на Яндекс Картах</span>
+          <input
+            value={reviewsValue}
+            onChange={(event) => setReviewsValue(event.target.value)}
+            placeholder="https://yandex.ru/maps/org/…/reviews/"
+            inputMode="url"
+            autoComplete="off"
+            spellCheck={false}
+            className={cn(field, reviewsOk ? "border-line-strong" : "border-weak/60")}
+          />
+          <span className={cn("mt-1.5 block text-[12px] leading-snug", reviewsOk ? "text-fg-3" : "text-weak")}>
+            {reviewsOk
+              ? "Кнопка «Отзывы» в меню и подвале. Пустое поле — кнопки нет."
+              : "Нужна ссылка на Яндекс Карты: организация → Отзывы → Поделиться."}
+          </span>
+        </label>
         <p className="text-[12px] leading-relaxed text-fg-3">
-          Меняется везде: в блоке «Контакты», в подвале и во всех кнопках «Написать в Telegram».
+          Меняется везде: в блоке «Контакты», в подвале и во всех кнопках «Написать в Telegram». Новая кнопка «Отзывы»
+          появится после публикации.
         </p>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="h-9 rounded-[5px] px-3 text-[13px] text-fg-2 hover:bg-surface-2 hover:text-fg">
@@ -385,7 +408,7 @@ export function ContactsPanel({
           </button>
           <button
             type="submit"
-            disabled={!telegramName || !phoneOk}
+            disabled={!telegramName || !phoneOk || !reviewsOk}
             className="h-9 rounded-[5px] bg-blue px-4 text-[13px] font-medium text-white transition-[background-color,transform] duration-[120ms] hover:bg-[#4a86ff] active:scale-[0.97] disabled:opacity-40"
           >
             Применить
