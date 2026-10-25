@@ -19,6 +19,8 @@ import { SiteTracker } from "@/components/analytics/SiteTracker";
 import { AdminHost } from "@/components/admin/AdminHost";
 import { getOverrides } from "@/lib/content/overrides";
 import { buildContacts } from "@/lib/constants/contacts";
+import { LeadDialog } from "@/components/lead/LeadDialog";
+import { botUsername } from "@/lib/telegram/api";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]">): Promise<Metadata> {
   const { locale } = await params;
@@ -52,7 +54,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]">): Prom
 export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const [t, overrides] = await Promise.all([getMessages(locale), getOverrides()]);
+  const [t, overrides, bot] = await Promise.all([getMessages(locale), getOverrides(), botUsername()]);
   const contacts = buildContacts(overrides.settings);
 
   return (
@@ -72,6 +74,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       <RevealObserver key={`reveal-${locale}`} />
       <ScrollRestore key={`scroll-${locale}`} />
       <SiteTracker locale={locale} />
+      <LeadDialog t={t.lead} locale={locale} botUrl={bot ? `https://t.me/${bot}?start=new` : null} />
       <AdminHost locale={locale} />
     </MediaProvider>
   );

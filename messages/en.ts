@@ -381,6 +381,43 @@ const en: Messages = {
       services: ["Hair", "Nails", "Skin care"],
     },
   },
+
+  lead: {
+    eyebrow: "Request",
+    title: "Tell us about your project",
+    text: "A few words about your business — we’ll get back to you within a working day.",
+    close: "Close",
+    serviceLabel: "What do you need",
+    services: {
+      business: "Business website",
+      beauty: "Beauty salon website",
+      redesign: "Redesign",
+      other: "Something else",
+    },
+    name: "Your name",
+    namePlaceholder: "Name",
+    contact: "How to reach you",
+    contactPlaceholder: "Phone, @username or e-mail",
+    message: "About your business",
+    messagePlaceholder: "E.g. a small salon that needs online booking",
+    optional: "optional",
+    submit: "Send request",
+    sending: "Sending…",
+    privacy: "We only use your contacts to reply to this request.",
+    orBot: "Prefer Telegram?",
+    orBotLink: "Use our bot",
+    errors: {
+      name: "Please enter your name",
+      contact: "Enter a phone, @username or e-mail",
+      rate_limited: "Too many requests in a row. Try later or message us on Telegram.",
+      generic: "Couldn’t send it. Please try again or message us on Telegram.",
+    },
+    successTitle: "Request {number} sent",
+    successText: "Thank you! We’ll get back to you within a working day.",
+    track: "Follow the status in Telegram",
+    trackHint: "The bot will message you when a manager picks it up.",
+    done: "Done",
+  },
 };
 
 export default en;

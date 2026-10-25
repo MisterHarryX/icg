@@ -146,7 +146,7 @@ export function Header({ locale, t, reviewsUrl }: { locale: Locale; t: NavCopy; 
             <LocaleSwitcher locale={locale} label={t.language} switchLabel={t.switchTo} />
           </div>
           <div className="hidden md:block">
-            <ButtonLink href={`#${SECTION_IDS.contact}`}>{t.cta}</ButtonLink>
+            <ButtonLink data-lead-open href={`#${SECTION_IDS.contact}`}>{t.cta}</ButtonLink>
           </div>
           <button
             ref={menuButton}
@@ -225,7 +225,7 @@ export function Header({ locale, t, reviewsUrl }: { locale: Locale; t: NavCopy; 
           </nav>
           <div className="mt-auto flex flex-col gap-6 pt-8">
             <LocaleSwitcher locale={locale} label={t.language} switchLabel={t.switchTo} onNavigate={() => close()} />
-            <ButtonLink href={`#${SECTION_IDS.contact}`} size="lg" arrow onClick={() => close()}>
+            <ButtonLink data-lead-open href={`#${SECTION_IDS.contact}`} size="lg" arrow onClick={() => close()}>
               {t.cta}
             </ButtonLink>
           </div>

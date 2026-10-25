@@ -32,7 +32,7 @@ export function Hero({ t, aura }: { t: HeroCopy; aura: Messages["mockups"]["aura
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row" data-intro style={revealDelay(240)}>
-            <ButtonLink href={`#${SECTION_IDS.contact}`} size="lg" arrow>
+            <ButtonLink data-lead-open href={`#${SECTION_IDS.contact}`} size="lg" arrow>
               {t.primaryCta}
             </ButtonLink>
             <ButtonLink href={`#${SECTION_IDS.work}`} size="lg" variant="secondary">

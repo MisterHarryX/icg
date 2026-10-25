@@ -68,12 +68,14 @@ export function Dashboard({
   geoReady,
   editsCount,
   storageReady,
+  newLeads = 0,
 }: {
   stats: Stats;
   live: number;
   geoReady: boolean;
   editsCount: number;
   storageReady: boolean;
+  newLeads?: number;
 }) {
   const { totals, previous } = stats;
   const unknownGeo = stats.countries.find((country) => country.code === "")?.value ?? 0;
@@ -96,7 +98,16 @@ export function Dashboard({
             <span className="font-brand text-[12px] tracking-[0.3em] text-fg">ICG</span>
             <span className="text-[13px] text-fg-3">Админ</span>
           </Link>
-          <span className="hidden sm:block">
+          <nav className="flex items-center gap-1 text-[13px]">
+            <span aria-current="page" className="h-8 rounded-[5px] bg-white/10 px-2.5 leading-8 text-fg">
+              Статистика
+            </span>
+            <Link href="/admin/leads" className="flex h-8 items-center gap-1.5 rounded-[5px] px-2.5 text-fg-3 transition-colors hover:bg-surface-2 hover:text-fg">
+              Заявки
+              {newLeads > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-blue px-1 text-[11px] text-white tabular-nums">{newLeads}</span>}
+            </Link>
+          </nav>
+          <span className="hidden lg:block">
             <LiveCount initial={live} />
           </span>
           <span className="flex-1" />

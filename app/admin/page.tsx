@@ -6,12 +6,20 @@ import { BACKEND } from "@/lib/admin/backend";
 import { GEOIP_DB } from "@/lib/admin/env";
 import { getLiveCount, getStats, isRangeId } from "@/lib/admin/stats";
 import { getOverrides } from "@/lib/content/overrides";
+import { leadsStorageReady } from "@/lib/leads/kv";
+import { listLeads } from "@/lib/leads/store";
 
 export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   if (!(await isAdmin())) return <LoginScreen />;
 
   const { range } = await searchParams;
-  const [stats, live, overrides] = await Promise.all([getStats(isRangeId(range) ? range : "7d"), getLiveCount(), getOverrides()]);
+  const [stats, live, overrides, leads] = await Promise.all([
+    getStats(isRangeId(range) ? range : "7d"),
+    getLiveCount(),
+    getOverrides(),
+    leadsStorageReady ? listLeads(500).catch(() => []) : Promise.resolve([]),
+  ]);
+  const newLeads = leads.filter((lead) => lead.status === "new").length;
   const editsCount =
     Object.values(overrides.texts).reduce((sum, texts) => sum + Object.keys(texts ?? {}).length, 0) +
     Object.keys(overrides.media).length +
@@ -19,5 +27,5 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
 
   // Vercel geolocates every request itself (x-vercel-ip-* headers).
   const geoReady = Boolean(process.env.VERCEL) || existsSync(GEOIP_DB);
-  return <Dashboard stats={stats} live={live} geoReady={geoReady} editsCount={editsCount} storageReady={BACKEND !== "none"} />;
+  return <Dashboard stats={stats} live={live} geoReady={geoReady} editsCount={editsCount} storageReady={BACKEND !== "none"} newLeads={newLeads} />;
 }

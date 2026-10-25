@@ -67,7 +67,7 @@ export function Contact({ t, contacts }: { t: Messages["contact"]; contacts: Con
         </p>
 
         <div className="mt-10" data-reveal style={revealDelay(240)}>
-          <ButtonLink href={contacts.requestUrl} size="lg" arrow className="h-14 px-8 text-[16px]">
+          <ButtonLink data-lead-open href="#request" size="lg" arrow className="h-14 px-8 text-[16px]">
             {t.button}
           </ButtonLink>
         </div>

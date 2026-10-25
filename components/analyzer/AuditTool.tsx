@@ -208,7 +208,7 @@ export function AuditTool({ t }: { t: AuditCopy }) {
 
       {view.phase === "done" && (
         <div className="audit-panel-in flex flex-col items-center gap-4 border-t border-line px-5 py-8 sm:py-10" style={{ animationDelay: "700ms" }}>
-          <ButtonLink href={`#${SECTION_IDS.contact}`} size="lg" arrow className="audit-cta h-14 w-full px-8 text-[16px] sm:w-auto">
+          <ButtonLink data-lead-open href={`#${SECTION_IDS.contact}`} size="lg" arrow className="audit-cta h-14 w-full px-8 text-[16px] sm:w-auto">
             {t.help}
           </ButtonLink>
           <button type="button" onClick={reset} className="text-[14px] text-fg-3 transition-colors hover:text-fg">
