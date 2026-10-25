@@ -70,7 +70,7 @@ export async function botStatus(): Promise<BotStatus> {
       configured: true,
       username: me.username,
       webhookUrl: info.url || undefined,
-      webhookOk: Boolean(info.url && info.url.endsWith(WEBHOOK_PATH)),
+      webhookOk: Boolean(info.url && info.url.endsWith(WEBHOOK_PATH) && !recentError),
       pending: info.pending_update_count,
       lastError: recentError,
       group: group ? { chatId: group.chatId, title: group.title } : null,

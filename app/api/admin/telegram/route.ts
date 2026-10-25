@@ -17,9 +17,10 @@ export async function POST(request: NextRequest) {
 
   try {
     if (action === "setup") {
-      // The site's own address, so a preview deployment can't steal the production webhook by accident.
+      // TELEGRAM_WEBHOOK_BASE points Telegram straight at Vercel (icg-xi.vercel.app): the custom
+      // domain goes through a proxy that Telegram can't always reach. Otherwise the site's own address.
       const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
-      const result = await setupBot(process.env.NEXT_PUBLIC_SITE_URL || `https://${host}`);
+      const result = await setupBot(process.env.TELEGRAM_WEBHOOK_BASE || process.env.NEXT_PUBLIC_SITE_URL || `https://${host}`);
       return NextResponse.json({ ok: true, ...result, status: await botStatus() });
     }
     if (action === "bind-code") return NextResponse.json({ ok: true, ...(await createBindCode()) });
