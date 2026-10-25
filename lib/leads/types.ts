@@ -8,12 +8,18 @@ export type LeadService = (typeof LEAD_SERVICES)[number];
 
 export type LeadSource = "site" | "bot" | "api";
 
-export type LeadActor = { kind: "client" | "manager" | "admin" | "api" | "system"; name: string; tgId?: number };
+export type LeadActor = { kind: "client" | "manager" | "admin" | "api" | "system"; name: string; tgId?: number; username?: string };
+
+/** Who works with the client. The client sees the name, @username and phone. */
+export type LeadManager = { name: string; username?: string; phone?: string; tgId?: number };
+
+/** A manager saved in the team list (added on the site, or seen in the managers' group). */
+export type Manager = LeadManager & { id: string; addedAt: number };
 
 export type LeadEvent = {
   ts: number;
   by: LeadActor;
-  action: "created" | "status" | "note" | "linked";
+  action: "created" | "status" | "note" | "linked" | "edited" | "assigned";
   status?: LeadStatus;
   text?: string;
 };
@@ -33,7 +39,7 @@ export type Lead = {
   message: string;
   locale?: string;
   /** Manager who took the lead. */
-  manager?: { name: string; tgId?: number };
+  manager?: LeadManager;
   /** Telegram account of the client (bot leads, or a site lead the client followed). */
   client?: { tgId: number; username?: string; name?: string };
   /** The card in the managers' group, edited on every change. */

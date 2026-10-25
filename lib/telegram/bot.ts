@@ -12,6 +12,7 @@ import {
   syncManagerCard,
 } from "@/lib/leads/service";
 import { clientLeads, findLeadByToken, getLead, listLeads } from "@/lib/leads/store";
+import { toLeadManager, upsertManager } from "@/lib/leads/managers";
 import {
   LEAD_SERVICES,
   LIMITS,
@@ -29,6 +30,7 @@ import {
   answerCallback,
   botUsername,
   editCaption,
+  editPhoto,
   editMessage,
   esc,
   fullName,
@@ -42,6 +44,7 @@ import {
   type TgUser,
 } from "./api";
 import { contactHtml, leadLine } from "./cards";
+import { PROJECTS, projectHost, type Project } from "./projects";
 import { consumeBindCode, getGroup, isManagersChat, setGroup } from "./settings";
 
 /**
@@ -107,7 +110,8 @@ function parseCommand(text: string, username: string | null) {
 
 // --- Screens (the menu message) ---------------------------------------------------------
 
-type Screen = { html: string; keyboard: InlineButton[][] };
+/** `image` replaces the photo of the menu message (projects); menu screens show the ICG banner. */
+type Screen = { html: string; keyboard: InlineButton[][]; image?: string; link?: string };
 
 async function homeScreen(user: TgUser): Promise<Screen> {
   const site = siteUrl();
@@ -130,23 +134,45 @@ async function homeScreen(user: TgUser): Promise<Screen> {
 }
 
 function workScreen(): Screen {
-  const site = siteUrl("#work");
   return {
     html: [
       "<b>💼 Наши работы</b>",
       "",
-      "Концепты, собранные по тем же принципам, что и клиентские сайты.",
+      "Реальные сайты, которые мы сделали. Нажмите на проект — покажу подробнее и дам ссылку.",
       "",
-      "<b>AURA</b> · студия красоты",
-      "Спокойная эстетика, крупные фото и онлайн-запись в пару касаний.",
-      "",
-      "<b>FORMA</b> · барбершоп",
-      "Тёмная графичная подача, чёткий прайс и запись к мастеру.",
-      "",
-      "<b>nova</b> · кофейня",
-      "Светлый дружелюбный сайт: меню, атмосфера и адрес.",
+      ...PROJECTS.map((project) => `${project.emoji} <b>${esc(project.name)}</b> — ${esc(project.short)}`),
     ].join("\n"),
-    keyboard: [...(site ? [[link("Смотреть на сайте ↗", site)]] : []), [btn("📝 Хочу так же", "m:new")], [BACK]],
+    keyboard: [
+      ...PROJECTS.map((project) => [btn(`${project.emoji} ${project.name}`, `p:${project.id}`)]),
+      [btn("📝 Хочу такой же сайт", "m:new")],
+      [BACK],
+    ],
+  };
+}
+
+function projectScreen(project: Project): Screen {
+  const index = PROJECTS.indexOf(project);
+  const prev = PROJECTS[(index - 1 + PROJECTS.length) % PROJECTS.length];
+  const next = PROJECTS[(index + 1) % PROJECTS.length];
+  return {
+    html: [
+      `${project.emoji} <b>${esc(project.name)}</b>`,
+      `<i>${esc(project.kind)}</i>`,
+      "",
+      esc(project.text),
+      "",
+      ...project.highlights.map((item) => `• ${esc(item)}`),
+      "",
+      `🔗 <a href="${project.url}">${esc(projectHost(project.url))}</a>`,
+    ].join("\n"),
+    keyboard: [
+      [link("🌐 Открыть сайт ↗", project.url)],
+      [btn("‹", `p:${prev.id}`), btn(`${index + 1} / ${PROJECTS.length}`, "m:work"), btn("›", `p:${next.id}`)],
+      [btn("📝 Хочу такой же", "m:new")],
+      [btn("← Все работы", "m:work"), btn("🏠 Меню", "m:home")],
+    ],
+    image: project.image,
+    link: project.url,
   };
 }
 
@@ -222,12 +248,24 @@ async function renderScreen(name: string, user: TgUser): Promise<Screen | null> 
 /** Shows a screen in place of `message` when given, else as a new message. */
 async function showScreen(chatId: number, screen: Screen, message?: TgMessage) {
   const reply_markup = inline(screen.keyboard);
-  if (message) {
-    if (message.photo) await editCaption(chatId, message.message_id, screen.html, { reply_markup });
-    else await editMessage(chatId, message.message_id, screen.html, { reply_markup });
+  if (message?.photo) {
+    // Swap the picture too: a project's preview, or back to the ICG banner.
+    const photo = screen.image ?? BANNER_URL;
+    if (photo) {
+      try {
+        await editPhoto(chatId, message.message_id, photo, screen.html, { reply_markup });
+        return;
+      } catch (error) {
+        console.error("[bot] could not swap the photo", error);
+      }
+    }
+    await editCaption(chatId, message.message_id, screen.html, { reply_markup });
     return;
   }
-  await sendMessage(chatId, screen.html, { reply_markup });
+  // Text messages show a project as a large link preview instead.
+  const options = { reply_markup, preview_url: screen.link };
+  if (message) await editMessage(chatId, message.message_id, screen.html, options);
+  else await sendMessage(chatId, screen.html, options);
 }
 
 /** The home menu as a fresh message, with the ICG banner when available. */
@@ -596,8 +634,12 @@ async function handleCallback(query: TgCallbackQuery) {
     }
     if (!isLeadStatus(status)) return answerCallback(query.id);
     try {
-      const lead = await changeStatus(Number(idRaw), status, { kind: "manager", name: fullName(user), tgId: user.id });
-      await answerCallback(query.id, `${leadNumber(lead.id)}: ${STATUS_LABELS[status]}`);
+      const actor = { kind: "manager" as const, name: fullName(user), tgId: user.id, username: user.username };
+      // Whoever takes leads in the group joins the team list (the site can then assign to them too).
+      const saved = status === "work" ? await upsertManager({ name: actor.name, username: user.username, tgId: user.id }).catch(() => null) : null;
+      const lead = await changeStatus(Number(idRaw), status, actor, saved ? toLeadManager(saved) : undefined);
+      const hint = status === "work" && !user.username ? " · Добавьте себе @username в Telegram, чтобы клиент мог вам написать" : "";
+      await answerCallback(query.id, `${leadNumber(lead.id)}: ${STATUS_LABELS[status]}${hint}`, Boolean(hint));
     } catch (error) {
       if (error instanceof LeadNotFoundError) return answerCallback(query.id, "Заявка не найдена", true);
       throw error;
@@ -620,6 +662,14 @@ async function handleCallback(query: TgCallbackQuery) {
     // Old messages (a finished form, a status notice) open the menu as a new message.
     if (name === "home" && message && !message.photo) return sendHome(chatId, user);
     return showScreen(chatId, screen, message);
+  }
+
+  // A project card in "Работы".
+  if (data.startsWith("p:")) {
+    const project = PROJECTS.find((item) => item.id === data.slice(2));
+    await answerCallback(query.id);
+    if (project) return showScreen(chatId, projectScreen(project), message);
+    return;
   }
 
   // Request form.

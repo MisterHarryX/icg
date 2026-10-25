@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { apiAuthorized, apiEnabled } from "@/lib/leads/apiAuth";
-import { LeadNotFoundError, addNote, changeStatus } from "@/lib/leads/service";
+import { LeadNotFoundError, LeadStateError, addNote, changeStatus } from "@/lib/leads/service";
 import { getLead } from "@/lib/leads/store";
 import { isLeadStatus } from "@/lib/leads/types";
 import { toView } from "@/lib/leads/view";
@@ -40,6 +40,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     return NextResponse.json({ lead: toView(lead) });
   } catch (error) {
     if (error instanceof LeadNotFoundError) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (error instanceof LeadStateError) return NextResponse.json({ error: "invalid", message: error.message }, { status: 422 });
     throw error;
   }
 }

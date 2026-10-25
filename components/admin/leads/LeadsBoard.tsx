@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  LEAD_SERVICES,
   LEAD_STATUSES,
   SERVICE_LABELS,
   SOURCE_LABELS,
@@ -12,38 +13,33 @@ import {
 } from "@/lib/leads/types";
 import type { BotStatus } from "@/lib/telegram/setup";
 import { cn } from "@/lib/utils";
+import { AssignPanel } from "./AssignPanel";
 import { BotPanel } from "./BotPanel";
+import { ManagersPanel } from "./ManagersPanel";
+import { ACTOR_LABELS, STATUS_DOT, STATUS_TONE, inputClass, type LeadPatch, type Manager, type UpdateLead } from "./shared";
 
 type Filter = "all" | LeadStatus;
-
-const STATUS_TONE: Record<LeadStatus, string> = {
-  new: "border-blue/40 bg-blue/[0.12] text-[#8fb2ff]",
-  work: "border-fair/35 bg-fair/[0.1] text-fair",
-  done: "border-good/35 bg-good/[0.1] text-good",
-  rejected: "border-line-strong bg-white/[0.04] text-fg-3",
-};
-
-const STATUS_DOT: Record<LeadStatus, string> = { new: "bg-blue", work: "bg-fair", done: "bg-good", rejected: "bg-fg-3" };
-
-const ACTOR_LABELS = { client: "Клиент", manager: "Менеджер", admin: "Сайт", api: "API", system: "Система" } as const;
 
 /** Leads from the site and the bot. Polls every 15 s so changes made in Telegram show up here. */
 export function LeadsBoard({
   initialLeads,
+  initialManagers,
   storageReady,
   initialBot,
   timeZone,
   focusId,
   renderedAt,
 }: {
-  renderedAt: number;
   initialLeads: LeadView[];
+  initialManagers: Manager[];
   storageReady: boolean;
   initialBot: BotStatus;
   timeZone: string;
   focusId?: number;
+  renderedAt: number;
 }) {
   const [leads, setLeads] = useState(initialLeads);
+  const [managers, setManagers] = useState(initialManagers);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
@@ -53,6 +49,11 @@ export function LeadsBoard({
 
   const time = useMemo(() => new Intl.DateTimeFormat("ru-RU", { timeZone, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), [timeZone]);
 
+  const refreshManagers = useCallback(async () => {
+    const response = await fetch("/api/admin/managers", { cache: "no-store" }).catch(() => null);
+    if (response?.ok) setManagers(((await response.json()) as { managers: Manager[] }).managers);
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/leads", { cache: "no-store" });
@@ -60,10 +61,11 @@ export function LeadsBoard({
       const data = (await response.json()) as { leads: LeadView[] };
       setLeads(data.leads);
       setSynced(Date.now());
+      void refreshManagers();
     } catch {
       // Offline for a moment; the next tick retries.
     }
-  }, []);
+  }, [refreshManagers]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -85,24 +87,26 @@ export function LeadsBoard({
     document.getElementById(`lead-${focusId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [focusId]);
 
-  async function update(id: number, body: { status?: LeadStatus; note?: string }) {
+  const update: UpdateLead = useCallback(async (id: number, patch: LeadPatch) => {
     setBusy(id);
     setError(null);
     try {
       const response = await fetch(`/api/admin/leads/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(patch),
       });
-      const data = (await response.json().catch(() => ({}))) as { lead?: LeadView };
-      if (!response.ok || !data.lead) throw new Error();
+      const data = (await response.json().catch(() => ({}))) as { lead?: LeadView; message?: string };
+      if (!response.ok || !data.lead) throw new Error(data.message || "Не получилось сохранить. Обновите страницу и попробуйте ещё раз.");
       setLeads((current) => current.map((lead) => (lead.id === id ? data.lead! : lead)));
-    } catch {
-      setError("Не получилось сохранить. Обновите страницу и попробуйте ещё раз.");
+      return data.lead;
+    } catch (e) {
+      setError(`${leadNumber(id)}: ${e instanceof Error ? e.message : String(e)}`);
+      return null;
     } finally {
       setBusy(null);
     }
-  }
+  }, []);
 
   const counts = useMemo(() => {
     const result: Record<Filter, number> = { all: leads.length, new: 0, work: 0, done: 0, rejected: 0 };
@@ -120,7 +124,7 @@ export function LeadsBoard({
     return leads.filter((lead) => {
       if (filter !== "all" && lead.status !== filter) return false;
       if (!q) return true;
-      return [leadNumber(lead.id), String(lead.id), lead.name, lead.contact, lead.message, lead.client?.username ?? "", lead.manager?.name ?? ""]
+      return [leadNumber(lead.id), String(lead.id), lead.name, lead.contact, lead.message, lead.client?.username ?? "", lead.manager?.name ?? "", lead.manager?.username ?? ""]
         .join(" ")
         .toLowerCase()
         .includes(q);
@@ -199,8 +203,11 @@ export function LeadsBoard({
           </div>
 
           {error && (
-            <p role="alert" className="mt-4 rounded-[8px] border border-weak/30 bg-weak/[0.08] px-3.5 py-2.5 text-[13px] text-weak">
+            <p role="alert" className="mt-4 flex items-start justify-between gap-3 rounded-[8px] border border-weak/30 bg-weak/[0.08] px-3.5 py-2.5 text-[13px] text-weak">
               {error}
+              <button type="button" onClick={() => setError(null)} aria-label="Скрыть" className="shrink-0 opacity-70 hover:opacity-100">
+                ×
+              </button>
             </p>
           )}
 
@@ -217,20 +224,24 @@ export function LeadsBoard({
                 <LeadCard
                   key={lead.id}
                   lead={lead}
+                  managers={managers}
                   time={time}
                   busy={busy === lead.id}
                   open={expanded === lead.id}
                   highlight={focusId === lead.id}
                   onToggle={() => setExpanded((current) => (current === lead.id ? null : lead.id))}
-                  onStatus={(status) => update(lead.id, { status })}
-                  onNote={(note) => update(lead.id, { note })}
+                  update={update}
+                  onManagersChanged={() => void refreshManagers()}
                 />
               ))}
             </ul>
           )}
         </div>
 
-        <BotPanel initial={initialBot} />
+        <div className="grid gap-4 lg:sticky lg:top-20">
+          <BotPanel initial={initialBot} />
+          <ManagersPanel managers={managers} onChange={setManagers} />
+        </div>
       </div>
     </main>
   );
@@ -243,34 +254,45 @@ function contactHref(contact: string) {
   return `tel:${contact.replace(/[^\d+]/g, "")}`;
 }
 
+type Mode = "view" | "assign" | "edit";
+
 function LeadCard({
   lead,
+  managers,
   time,
   busy,
   open,
   highlight,
   onToggle,
-  onStatus,
-  onNote,
+  update,
+  onManagersChanged,
 }: {
   lead: LeadView;
+  managers: Manager[];
   time: Intl.DateTimeFormat;
   busy: boolean;
   open: boolean;
   highlight: boolean;
   onToggle: () => void;
-  onStatus: (status: LeadStatus) => void;
-  onNote: (note: string) => void;
+  update: UpdateLead;
+  onManagersChanged: () => void;
 }) {
+  const [mode, setMode] = useState<Mode>("view");
   const [note, setNote] = useState("");
+
+  function setStatus(status: LeadStatus) {
+    // Taking a lead always names a manager: the client is told who it is.
+    if (status === "work") setMode("assign");
+    else void update(lead.id, { status });
+  }
 
   return (
     <li
       id={`lead-${lead.id}`}
       className={cn(
-        "rounded-[12px] border bg-bg-soft transition-[border-color,opacity]",
-        highlight ? "border-blue/50" : "border-line",
-        lead.status === "rejected" && "opacity-70",
+        "overflow-hidden rounded-[12px] border bg-bg-soft transition-[border-color,opacity]",
+        highlight || mode !== "view" ? "border-blue/50" : "border-line",
+        lead.status === "rejected" && mode === "view" && "opacity-70",
         busy && "opacity-60",
       )}
     >
@@ -290,52 +312,101 @@ function LeadCard({
           <span className="ml-auto text-[12px] text-fg-3 tabular-nums">{time.format(lead.createdAt)}</span>
         </div>
 
-        <div className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <div className="min-w-0">
-            <p className="truncate text-[17px] font-medium text-fg">{lead.name}</p>
-            <p className="mt-0.5 flex flex-wrap gap-x-3 text-[14px]">
-              <a href={contactHref(lead.contact)} target={lead.contact.startsWith("@") ? "_blank" : undefined} rel="noreferrer" className="text-[#8fb2ff] hover:underline">
-                {lead.contact}
-              </a>
-              {lead.client?.username && lead.contact !== `@${lead.client.username}` && (
-                <a href={`https://t.me/${lead.client.username}`} target="_blank" rel="noreferrer" className="text-fg-3 hover:text-fg">
-                  @{lead.client.username}
-                </a>
-              )}
-            </p>
-          </div>
-          <p className="text-[13px] text-fg-2 sm:text-right">
-            {SERVICE_LABELS[lead.service]}
-            {lead.manager && <span className="block text-fg-3">Менеджер: {lead.manager.name}</span>}
-          </p>
-        </div>
+        {mode === "edit" ? (
+          <EditForm lead={lead} busy={busy} onCancel={() => setMode("view")} onSave={async (edit) => (await update(lead.id, { edit })) && setMode("view")} />
+        ) : (
+          <>
+            <div className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="min-w-0">
+                <p className="truncate text-[17px] font-medium text-fg">{lead.name}</p>
+                <p className="mt-0.5 flex flex-wrap gap-x-3 text-[14px]">
+                  <a href={contactHref(lead.contact)} target={lead.contact.startsWith("@") ? "_blank" : undefined} rel="noreferrer" className="text-[#8fb2ff] hover:underline">
+                    {lead.contact}
+                  </a>
+                  {lead.client?.username && lead.contact !== `@${lead.client.username}` && (
+                    <a href={`https://t.me/${lead.client.username}`} target="_blank" rel="noreferrer" className="text-fg-3 hover:text-fg">
+                      @{lead.client.username}
+                    </a>
+                  )}
+                </p>
+              </div>
+              <p className="text-[13px] text-fg-2 sm:text-right">{SERVICE_LABELS[lead.service]}</p>
+            </div>
 
-        {lead.message && <p className={cn("mt-3 text-[14px] leading-relaxed whitespace-pre-line text-fg-2", !open && "line-clamp-3")}>{lead.message}</p>}
+            {lead.message && <p className={cn("mt-3 text-[14px] leading-relaxed whitespace-pre-line text-fg-2", !open && "line-clamp-3")}>{lead.message}</p>}
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <div className="flex rounded-[7px] border border-line bg-surface p-0.5" role="group" aria-label="Статус">
-            {LEAD_STATUSES.map((status) => (
-              <button
-                key={status}
-                type="button"
-                disabled={busy || lead.status === status}
-                onClick={() => onStatus(status)}
-                className={cn(
-                  "h-7 rounded-[5px] px-2.5 text-[12px] transition-colors disabled:cursor-default",
-                  lead.status === status ? "bg-white/10 text-fg" : "text-fg-3 hover:text-fg",
+            {lead.manager && (
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[8px] border border-line bg-surface px-3 py-2 text-[13px]">
+                <span className="text-fg-3">Менеджер</span>
+                <span className="text-fg">{lead.manager.name}</span>
+                {lead.manager.username && (
+                  <a href={`https://t.me/${lead.manager.username}`} target="_blank" rel="noreferrer" className="text-[#8fb2ff] hover:underline">
+                    @{lead.manager.username}
+                  </a>
                 )}
+                {lead.manager.phone && <span className="text-fg-3">{lead.manager.phone}</span>}
+                {lead.status === "work" && mode === "view" && (
+                  <button type="button" onClick={() => setMode("assign")} className="ml-auto text-[12px] text-fg-3 transition-colors hover:text-fg">
+                    Сменить
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {mode === "view" && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {lead.status === "new" && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setMode("assign")}
+                className="h-8 rounded-[6px] bg-blue px-3 text-[13px] text-white transition-colors hover:bg-[#4a86ff] disabled:opacity-50"
               >
-                {STATUS_LABELS[status]}
+                🙋 Взять в работу
               </button>
-            ))}
+            )}
+            <div className="flex rounded-[7px] border border-line bg-surface p-0.5" role="group" aria-label="Статус">
+              {LEAD_STATUSES.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  disabled={busy || lead.status === status}
+                  onClick={() => setStatus(status)}
+                  className={cn(
+                    "h-7 rounded-[5px] px-2.5 text-[12px] transition-colors disabled:cursor-default",
+                    lead.status === status ? "bg-white/10 text-fg" : "text-fg-3 hover:text-fg",
+                  )}
+                >
+                  {STATUS_LABELS[status]}
+                </button>
+              ))}
+            </div>
+            <span className="ml-auto flex gap-1">
+              <button type="button" onClick={() => setMode("edit")} className="h-7 rounded-[5px] px-2 text-[12px] text-fg-3 transition-colors hover:bg-white/[0.04] hover:text-fg">
+                ✏️ Редактировать
+              </button>
+              <button type="button" onClick={onToggle} aria-expanded={open} className="h-7 rounded-[5px] px-2 text-[12px] text-fg-3 transition-colors hover:bg-white/[0.04] hover:text-fg">
+                {open ? "Свернуть" : `История · ${lead.history.length}`}
+              </button>
+            </span>
           </div>
-          <button type="button" onClick={onToggle} aria-expanded={open} className="ml-auto h-7 rounded-[5px] px-2 text-[12px] text-fg-3 transition-colors hover:text-fg">
-            {open ? "Свернуть" : `История · ${lead.history.length}`}
-          </button>
-        </div>
+        )}
       </div>
 
-      {open && (
+      {mode === "assign" && (
+        <AssignPanel
+          lead={lead}
+          managers={managers}
+          update={update}
+          onDone={() => setMode("view")}
+          onCancel={() => setMode("view")}
+          onManagersChanged={onManagersChanged}
+        />
+      )}
+
+      {open && mode === "view" && (
         <div className="border-t border-line px-4 py-4 sm:px-5">
           <ol className="grid gap-2.5">
             {lead.history.map((event, i) => (
@@ -344,12 +415,15 @@ function LeadCard({
                 <span className="min-w-0 flex-1">
                   <span className="text-fg-2">
                     {event.action === "created" && "Заявка создана"}
-                    {event.action === "status" && <>Статус: {event.status ? STATUS_LABELS[event.status] : event.text}</>}
+                    {event.action === "status" && <>Статус: {event.text ?? (event.status ? STATUS_LABELS[event.status] : "")}</>}
+                    {event.action === "assigned" && event.text}
+                    {event.action === "edited" && event.text}
                     {event.action === "linked" && "Клиент подписался на уведомления в Telegram"}
                     {event.action === "note" && <span className="whitespace-pre-line text-fg">{event.text}</span>}
                   </span>
                   <span className="block text-[12px] text-fg-3">
-                    {event.by.name} · {ACTOR_LABELS[event.by.kind]} · {time.format(event.ts)}
+                    {event.by.name}
+                    {event.by.username && ` (@${event.by.username})`} · {ACTOR_LABELS[event.by.kind]} · {time.format(event.ts)}
                   </span>
                 </span>
               </li>
@@ -360,23 +434,81 @@ function LeadCard({
             onSubmit={(event) => {
               event.preventDefault();
               if (!note.trim()) return;
-              onNote(note);
+              void update(lead.id, { note });
               setNote("");
             }}
           >
-            <input
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="Заметка для команды…"
-              maxLength={1000}
-              className="h-9 min-w-0 flex-1 rounded-[6px] border border-line-strong bg-surface-2 px-3 text-[13px] text-fg placeholder:text-fg-3 focus:border-blue/60 focus:outline-none"
-            />
-            <button type="submit" disabled={busy || !note.trim()} className="h-9 rounded-[6px] bg-blue px-3 text-[13px] text-white transition-colors hover:bg-[#4a86ff] disabled:opacity-50">
+            <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Заметка для команды…" maxLength={1000} className={inputClass} />
+            <button type="submit" disabled={busy || !note.trim()} className="h-9 shrink-0 rounded-[6px] bg-blue px-3 text-[13px] text-white transition-colors hover:bg-[#4a86ff] disabled:opacity-50">
               Добавить
             </button>
           </form>
         </div>
       )}
     </li>
+  );
+}
+
+function EditForm({
+  lead,
+  busy,
+  onSave,
+  onCancel,
+}: {
+  lead: LeadView;
+  busy: boolean;
+  onSave: (edit: NonNullable<LeadPatch["edit"]>) => void;
+  onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState({ name: lead.name, contact: lead.contact, service: lead.service as string, message: lead.message });
+  const label = "mb-1 block text-[12px] text-fg-3";
+
+  return (
+    <form
+      className="mt-3 grid gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave(draft);
+      }}
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label>
+          <span className={label}>Имя</span>
+          <input className={inputClass} required minLength={2} maxLength={80} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+        </label>
+        <label>
+          <span className={label}>Контакт</span>
+          <input className={inputClass} required maxLength={80} value={draft.contact} onChange={(e) => setDraft({ ...draft, contact: e.target.value })} />
+        </label>
+      </div>
+      <label>
+        <span className={label}>Услуга</span>
+        <select className={inputClass} value={draft.service} onChange={(e) => setDraft({ ...draft, service: e.target.value })}>
+          {LEAD_SERVICES.map((service) => (
+            <option key={service} value={service}>
+              {SERVICE_LABELS[service]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span className={label}>Описание</span>
+        <textarea
+          className={cn(inputClass, "h-auto min-h-[84px] resize-y py-2 leading-relaxed")}
+          maxLength={1500}
+          value={draft.message}
+          onChange={(e) => setDraft({ ...draft, message: e.target.value })}
+        />
+      </label>
+      <div className="flex gap-2">
+        <button type="submit" disabled={busy} className="h-9 rounded-[6px] bg-blue px-4 text-[13px] text-white transition-colors hover:bg-[#4a86ff] disabled:opacity-50">
+          Сохранить
+        </button>
+        <button type="button" onClick={onCancel} className="h-9 rounded-[6px] px-3 text-[13px] text-fg-3 transition-colors hover:text-fg">
+          Отмена
+        </button>
+        <span className="ml-auto self-center text-[12px] text-fg-3">Карточка в группе обновится</span>
+      </div>
+    </form>
   );
 }

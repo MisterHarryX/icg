@@ -85,14 +85,24 @@ export async function tg<T = unknown>(method: string, params: Record<string, unk
   return data.result as T;
 }
 
-type SendOptions = { reply_markup?: ReplyMarkup; disable_preview?: boolean };
+type SendOptions = {
+  reply_markup?: ReplyMarkup;
+  disable_preview?: boolean;
+  /** Show this URL's link preview as a large image above the text. */
+  preview_url?: string;
+};
+
+function previewOptions(options: SendOptions) {
+  if (options.preview_url) return { url: options.preview_url, prefer_large_media: true, show_above_text: true };
+  return { is_disabled: options.disable_preview ?? true };
+}
 
 export function sendMessage(chatId: number, html: string, options: SendOptions = {}) {
   return tg<TgMessage>("sendMessage", {
     chat_id: chatId,
     text: html,
     parse_mode: "HTML",
-    link_preview_options: { is_disabled: options.disable_preview ?? true },
+    link_preview_options: previewOptions(options),
     reply_markup: options.reply_markup,
   });
 }
@@ -109,7 +119,22 @@ export async function editMessage(chatId: number, messageId: number, html: strin
       message_id: messageId,
       text: html,
       parse_mode: "HTML",
-      link_preview_options: { is_disabled: options.disable_preview ?? true },
+      link_preview_options: previewOptions(options),
+      reply_markup: options.reply_markup,
+    });
+  } catch (error) {
+    if (error instanceof TelegramError && /not modified/i.test(error.description)) return;
+    throw error;
+  }
+}
+
+/** Replaces the photo and caption of a photo message. */
+export async function editPhoto(chatId: number, messageId: number, photo: string, captionHtml: string, options: SendOptions = {}) {
+  try {
+    await tg("editMessageMedia", {
+      chat_id: chatId,
+      message_id: messageId,
+      media: { type: "photo", media: photo, caption: captionHtml, parse_mode: "HTML" },
       reply_markup: options.reply_markup,
     });
   } catch (error) {

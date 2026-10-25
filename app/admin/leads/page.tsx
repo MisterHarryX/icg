@@ -5,6 +5,7 @@ import { LeadsBoard } from "@/components/admin/leads/LeadsBoard";
 import { isAdmin } from "@/lib/admin/auth";
 import { ADMIN_TZ } from "@/lib/admin/env";
 import { leadsStorageReady } from "@/lib/leads/kv";
+import { listManagers } from "@/lib/leads/managers";
 import { listLeads } from "@/lib/leads/store";
 import { toView } from "@/lib/leads/view";
 import { botStatus } from "@/lib/telegram/setup";
@@ -13,15 +14,15 @@ export const metadata: Metadata = { title: "ICG · Заявки" };
 export const dynamic = "force-dynamic";
 
 async function loadLeads() {
-  const leads = leadsStorageReady ? await listLeads(500).catch(() => []) : [];
-  return { leads, loadedAt: Date.now() };
+  const [leads, managers] = leadsStorageReady ? await Promise.all([listLeads(500).catch(() => []), listManagers()]) : [[], []];
+  return { leads, managers, loadedAt: Date.now() };
 }
 
 export default async function LeadsPage({ searchParams }: PageProps<"/admin/leads">) {
   if (!(await isAdmin())) return <LoginScreen />;
 
   const { id } = await searchParams;
-  const [{ leads, loadedAt }, bot] = await Promise.all([loadLeads(), botStatus()]);
+  const [{ leads, managers, loadedAt }, bot] = await Promise.all([loadLeads(), botStatus()]);
 
   return (
     <div className="min-h-dvh pb-20">
@@ -46,6 +47,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/admin/lead
 
       <LeadsBoard
         initialLeads={leads.map(toView)}
+        initialManagers={managers}
         storageReady={leadsStorageReady}
         initialBot={bot}
         timeZone={ADMIN_TZ}

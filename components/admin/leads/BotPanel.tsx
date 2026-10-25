@@ -42,7 +42,7 @@ export function BotPanel({ initial }: { initial: BotStatus }) {
   const command = bind ? `/bind@${status.username ?? "bot"} ${bind.code}` : "";
 
   return (
-    <aside className="grid gap-4 rounded-[12px] border border-line bg-bg-soft p-5 lg:sticky lg:top-20">
+    <aside className="grid gap-4 rounded-[12px] border border-line bg-bg-soft p-5">
       <div className="flex items-center gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#2aabee] text-white">
           <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden="true">

@@ -6,7 +6,7 @@ import { botConfigured, botUsername, editMessage, sendMessage, TelegramError } f
 import { clientStatusNotice, managerCard, managerKeyboard } from "@/lib/telegram/cards";
 import { getGroup } from "@/lib/telegram/settings";
 import { addClientLead, getLead, insertLead, nextLeadId, saveLead } from "./store";
-import { LIMITS, STATUS_LABELS, isLeadService, type Lead, type LeadActor, type LeadSource, type LeadStatus } from "./types";
+import { LIMITS, STATUS_LABELS, isLeadService, type Lead, type LeadActor, type LeadManager, type LeadSource, type LeadStatus } from "./types";
 
 /**
  * Everything that changes a lead goes through here, whatever the entry point
@@ -94,11 +94,11 @@ export async function syncManagerCard(lead: Lead) {
 
 async function notifyClient(lead: Lead) {
   if (!botConfigured || !lead.client) return;
-  const text = clientStatusNotice(lead, await studioTelegram());
-  if (!text) return;
-  await sendMessage(lead.client.tgId, text, {
-    reply_markup: { inline_keyboard: [[{ text: "📋 Мои заявки", callback_data: "m:my" }]] },
-  }).catch((error) => console.error("[leads] could not notify the client", error));
+  const notice = clientStatusNotice(lead, await studioTelegram());
+  if (!notice) return;
+  await sendMessage(lead.client.tgId, notice.html, { reply_markup: { inline_keyboard: notice.keyboard } }).catch((error) =>
+    console.error("[leads] could not notify the client", error),
+  );
 }
 
 // --- Operations --------------------------------------------------------------------
@@ -129,17 +129,78 @@ export async function createLead(
 
 export class LeadNotFoundError extends Error {}
 
-export async function changeStatus(id: number, status: LeadStatus, actor: LeadActor) {
+export class LeadStateError extends Error {}
+
+/**
+ * Status change. Taking a lead ("work") needs a manager: the one pressing the
+ * button in the group, or the one picked on the site (`manager`).
+ */
+export async function changeStatus(id: number, status: LeadStatus, actor: LeadActor, manager?: LeadManager) {
   const lead = await getLead(id);
   if (!lead) throw new LeadNotFoundError(`Заявка ${id} не найдена`);
-  if (lead.status === status) return lead;
+  if (lead.status === status && !(status === "work" && manager)) return lead;
 
-  lead.status = status;
-  if (status === "work" && (actor.kind === "manager" || actor.kind === "admin")) lead.manager = { name: actor.name, tgId: actor.tgId };
+  if (status === "work") {
+    const taker = manager ?? (actor.kind === "manager" ? { name: actor.name, username: actor.username, tgId: actor.tgId } : lead.manager);
+    if (!taker) throw new LeadStateError("Выберите менеджера, который возьмёт заявку");
+    lead.manager = taker;
+  }
   if (status === "new") lead.manager = undefined;
-  lead.history.push({ ts: Date.now(), by: actor, action: "status", status, text: STATUS_LABELS[status] });
+
+  const statusChanged = lead.status !== status;
+  lead.status = status;
+  lead.history.push({
+    ts: Date.now(),
+    by: actor,
+    action: "status",
+    status,
+    text: status === "work" && lead.manager ? `${STATUS_LABELS[status]} · ${managerLabel(lead.manager)}` : STATUS_LABELS[status],
+  });
+  await saveLead(lead);
+  await Promise.all([syncManagerCard(lead), statusChanged || status === "work" ? notifyClient(lead) : null]);
+  return lead;
+}
+
+export function managerLabel(manager: LeadManager) {
+  return manager.username ? `${manager.name} (@${manager.username})` : manager.name;
+}
+
+/** Hands a lead to another manager (or takes a new one). The client gets the new contact. */
+export async function assignManager(id: number, manager: LeadManager, actor: LeadActor) {
+  const lead = await getLead(id);
+  if (!lead) throw new LeadNotFoundError(`Заявка ${id} не найдена`);
+  if (lead.status !== "work") return changeStatus(id, "work", actor, manager);
+
+  lead.manager = manager;
+  lead.history.push({ ts: Date.now(), by: actor, action: "assigned", text: `Менеджер: ${managerLabel(manager)}` });
   await saveLead(lead);
   await Promise.all([syncManagerCard(lead), notifyClient(lead)]);
+  return lead;
+}
+
+const FIELD_LABELS = { name: "имя", contact: "контакт", service: "услуга", message: "описание" } as const;
+
+/** Admin edits the lead's details; the group card is re-rendered. */
+export async function editLead(id: number, patch: LeadInput, actor: LeadActor) {
+  const lead = await getLead(id);
+  if (!lead) throw new LeadNotFoundError(`Заявка ${id} не найдена`);
+  const next = validateLeadInput({
+    name: patch.name ?? lead.name,
+    contact: patch.contact ?? lead.contact,
+    service: patch.service ?? lead.service,
+    message: patch.message ?? lead.message,
+    locale: lead.locale,
+  });
+  const changed = (Object.keys(FIELD_LABELS) as (keyof typeof FIELD_LABELS)[]).filter((field) => next[field] !== lead[field]);
+  if (changed.length === 0) return lead;
+
+  lead.name = next.name;
+  lead.contact = next.contact;
+  lead.service = next.service;
+  lead.message = next.message;
+  lead.history.push({ ts: Date.now(), by: actor, action: "edited", text: `Изменено: ${changed.map((field) => FIELD_LABELS[field]).join(", ")}` });
+  await saveLead(lead);
+  await syncManagerCard(lead);
   return lead;
 }
 
