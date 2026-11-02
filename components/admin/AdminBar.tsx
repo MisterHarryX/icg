@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { clearMediaDrafts, setMediaDraft } from "@/components/content/MediaImage";
-import { DEFAULT_CONTACTS, buildContacts } from "@/lib/constants/contacts";
+import { DEFAULT_CONTACTS, YANDEX_MAP, buildContacts } from "@/lib/constants/contacts";
 import { DEFAULT_FONTS, fontVariables, type FontId } from "@/lib/content/fonts";
 import { MEDIA_SLOTS, type MediaId } from "@/lib/content/media";
 import type { ContentOverrides } from "@/lib/content/types";
@@ -191,10 +191,10 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
       const reviewsLive = publishedSettings?.reviews ?? "";
       if (reviews === reviewsLive) delete settings.reviews;
       else settings.reviews = reviews || null;
-      // The map works the same way: no default, empty removes it.
-      const mapLive = publishedSettings?.map ?? "";
+      // Map: the studio's map from the code unless changed; empty hides it.
+      const mapLive = publishedSettings?.map ?? YANDEX_MAP;
       if (map === mapLive) delete settings.map;
-      else settings.map = map || null;
+      else settings.map = map === YANDEX_MAP ? null : map;
       return { ...current, settings };
     });
   }

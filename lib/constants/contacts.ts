@@ -7,13 +7,15 @@
  */
 export const TELEGRAM_USERNAME = "icg_studio";
 export const PHONE_NUMBER = "+7 (000) 000-00-00";
+/** The studio on Yandex Maps (profile 235073753242): the map in the contact section. */
+export const YANDEX_MAP = "https://yandex.ru/maps/org/235073753242/";
 
 export type ContactSettings = {
   telegram?: string;
   phone?: string;
   /** Yandex Maps page with the studio's reviews. No link → no "Отзывы" button. */
   reviews?: string;
-  /** Yandex Maps link shown as a map in the contact section. No link → no map. */
+  /** Yandex Maps link shown as a map in the contact section. Not set → YANDEX_MAP; "" → no map. */
   map?: string;
 };
 
@@ -40,8 +42,12 @@ export function buildContacts(settings: ContactSettings = {}): Contacts {
     phoneHref: `tel:${phone.replace(/[^\d+]/g, "")}`,
     requestUrl: telegramUrl,
     reviewsUrl: settings.reviews || undefined,
-    map: settings.map ? { url: settings.map, embedUrl: yandexMapEmbedUrl(settings.map) } : undefined,
+    map: mapOf(settings.map ?? YANDEX_MAP),
   };
+}
+
+function mapOf(link: string) {
+  return link ? { url: link, embedUrl: yandexMapEmbedUrl(link) } : undefined;
 }
 
 /** "@name", "t.me/name", "https://t.me/name" → "name"; null when not a valid username. */
@@ -67,8 +73,9 @@ const YANDEX_HOST = /(^|\.)yandex\.(ru|com|kz|by|uz|com\.tr)$/i;
 /**
  * Anything Yandex Maps gives you → a normal https://yandex.ru/maps/… link;
  * null when it isn't one. Accepts a page link (organisation, address, route,
- * "Поделиться" short link yandex.ru/maps/-/…), the "Код для вставки" iframe
- * and the old map constructor <script>.
+ * "Поделиться" short link yandex.ru/maps/-/…), a Yandex Business profile
+ * (yandex.ru/profile/<id>), the "Код для вставки" iframe and the old map
+ * constructor <script>.
  */
 export function parseYandexMap(value: string) {
   let input = value.trim();
@@ -91,6 +98,10 @@ export function parseYandexMap(value: string) {
     return um ? `https://yandex.ru/maps/?um=${encodeURIComponent(um)}` : null;
   }
   if (!YANDEX_HOST.test(url.hostname)) return null;
+
+  // Business profile: the same organisation on the map.
+  const profile = url.pathname.match(/^\/profile\/(\d+)\/?$/);
+  if (profile) return `https://yandex.ru/maps/org/${profile[1]}/`;
 
   let path = url.pathname;
   if (path.startsWith("/map-widget/v1")) path = `/maps${path.slice("/map-widget/v1".length)}`;

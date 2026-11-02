@@ -87,8 +87,10 @@ export async function PUT(request: NextRequest) {
     if (!url) return NextResponse.json({ error: "reviews" }, { status: 400 });
     settings.reviews = url;
   }
+  // null → back to the studio's map from the code; "" → no map at all.
   const map = patch.settings?.map;
-  if (map === null || map === "") delete settings.map;
+  if (map === null) delete settings.map;
+  else if (map === "") settings.map = "";
   else if (typeof map === "string") {
     const url = parseYandexMap(map);
     if (!url) return NextResponse.json({ error: "map" }, { status: 400 });
