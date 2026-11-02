@@ -22,7 +22,7 @@ type Drafts = {
   media: Partial<Record<MediaId, string | null>>;
   fonts: { sans?: FontId | null; heading?: FontId | null };
   /** Telegram username / phone; null = back to the default from the code. */
-  settings: { telegram?: string | null; phone?: string | null; reviews?: string | null };
+  settings: { telegram?: string | null; phone?: string | null; reviews?: string | null; map?: string | null };
 };
 
 const NO_DRAFTS: Drafts = { texts: {}, media: {}, fonts: {}, settings: {} };
@@ -117,6 +117,7 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
     telegram: drafts.settings.telegram === undefined ? publishedSettings?.telegram : (drafts.settings.telegram ?? undefined),
     phone: drafts.settings.phone === undefined ? publishedSettings?.phone : (drafts.settings.phone ?? undefined),
     reviews: drafts.settings.reviews === undefined ? publishedSettings?.reviews : (drafts.settings.reviews ?? undefined),
+    map: drafts.settings.map === undefined ? publishedSettings?.map : (drafts.settings.map ?? undefined),
   });
 
   const draftCount =
@@ -165,8 +166,8 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
     applyText([{ path }], value);
   }
 
-  function applyContacts(telegram: string, phone: string, reviews: string) {
-    const next = buildContacts({ telegram, phone, reviews });
+  function applyContacts(telegram: string, phone: string, reviews: string, map: string) {
+    const next = buildContacts({ telegram, phone, reviews, map });
     // Live preview everywhere the contacts appear.
     replaceOnPage(`@${contacts.telegramUsername}`, `@${next.telegramUsername}`);
     replaceHref(contacts.telegramUrl, next.telegramUrl);
@@ -190,6 +191,10 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
       const reviewsLive = publishedSettings?.reviews ?? "";
       if (reviews === reviewsLive) delete settings.reviews;
       else settings.reviews = reviews || null;
+      // The map works the same way: no default, empty removes it.
+      const mapLive = publishedSettings?.map ?? "";
+      if (map === mapLive) delete settings.map;
+      else settings.map = map || null;
       return { ...current, settings };
     });
   }
@@ -247,6 +252,8 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
             ? "Проверьте Telegram: 4–32 латинских буквы, цифры или _."
             : error === "reviews"
               ? "Ссылка на отзывы должна вести на Яндекс Карты (https://yandex.ru/maps/…)."
+              : error === "map"
+              ? "Карта: нужна ссылка на Яндекс Карты (https://yandex.ru/maps/…) или код для вставки."
               : error === "phone"
               ? "Проверьте номер телефона."
               : error === "storage"
@@ -254,10 +261,19 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
                 : "",
         );
       }
-      const { overrides } = (await response.json()) as { overrides: ContentOverrides };
+      const { overrides, pages } = (await response.json()) as { overrides: ContentOverrides; pages?: boolean | null };
       setContent((current) => (current ? { ...current, overrides } : current));
       setDrafts(NO_DRAFTS);
-      setToast({ text: "Опубликовано. Посетители уже видят изменения.", tone: "ok" });
+      // Editing on the Vercel address: the public site (GitHub Pages) is rebuilt from it.
+      const publicCopy = window.location.hostname.endsWith(".vercel.app");
+      setToast({
+        text: !publicCopy
+          ? "Опубликовано. Посетители уже видят изменения."
+          : pages
+            ? "Опубликовано. На icg-xi.ru изменения появятся через 2–3 минуты."
+            : "Опубликовано. На icg-xi.ru изменения появятся в течение 15 минут.",
+        tone: "ok",
+      });
       // Re-render the page from the server so every component shows the published version.
       router.refresh();
     } catch (reason) {
@@ -450,6 +466,7 @@ export function AdminBar({ locale, onHide, onLogout }: { locale: Locale; onHide:
           telegram={contacts.telegramUsername}
           phone={contacts.phone}
           reviews={contacts.reviewsUrl ?? ""}
+          map={contacts.map?.url ?? ""}
           onApply={applyContacts}
           onClose={() => setPanel(null)}
         />

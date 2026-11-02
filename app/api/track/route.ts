@@ -5,6 +5,7 @@ import { analyticsEnabled, recordEvent, visitorId } from "@/lib/admin/events";
 import { resolveGeo } from "@/lib/admin/geo";
 import { clientIp } from "@/lib/admin/request";
 import { deviceInfo } from "@/lib/admin/ua";
+import { preflight } from "@/lib/cors";
 
 // Simple flood guard: events per IP per minute (in memory).
 const hits = new Map<string, { count: number; resetAt: number }>();
@@ -36,7 +37,23 @@ function referrerHost(ref: string | undefined, ownHost: string | null) {
   }
 }
 
+/** The site the visitor is on: the page's origin (GitHub Pages copy) or this server. */
+function siteHost(request: NextRequest) {
+  try {
+    const origin = request.headers.get("origin");
+    if (origin) return new URL(origin).host;
+  } catch {
+    // Fall back to Host.
+  }
+  return request.headers.get("host");
+}
+
 const noContent = () => new Response(null, { status: 204 });
+
+/** Older browsers may still ask before sending from the GitHub Pages domain. */
+export function OPTIONS(request: NextRequest) {
+  return preflight(request);
+}
 
 export async function POST(request: NextRequest) {
   // The admin's own visits are not counted; nothing to do without storage.
@@ -74,7 +91,7 @@ export async function POST(request: NextRequest) {
     os: device.os,
     device: device.device,
     browser: device.browser,
-    ref: referrerHost(text(body.ref, 500), request.headers.get("host")),
+    ref: referrerHost(text(body.ref, 500), siteHost(request)),
     utm: text(body.utm, 60)?.toLowerCase(),
     lang: text(body.lang, 20),
     tz: text(body.tz, 60),

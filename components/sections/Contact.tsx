@@ -96,7 +96,47 @@ export function Contact({ t, contacts }: { t: Messages["contact"]; contacts: Con
             </li>
           ))}
         </ul>
+
+        {contacts.map && <MapCard t={t} map={contacts.map} />}
       </div>
     </section>
+  );
+}
+
+/** Yandex map with the studio's place, set in admin mode → Контакты. */
+function MapCard({ t, map }: { t: Messages["contact"]; map: { url: string; embedUrl: string } }) {
+  return (
+    <figure className="card mt-3 w-full max-w-2xl overflow-hidden text-left" data-reveal style={revealDelay(360)}>
+      <div className="map-frame relative aspect-[4/3] bg-surface sm:aspect-[16/9]">
+        <iframe
+          src={map.embedUrl}
+          title={t.mapTitle}
+          loading="lazy"
+          allowFullScreen
+          className="absolute inset-0 size-full border-0"
+        />
+      </div>
+      <figcaption className="flex items-center gap-4 border-t border-line p-4 sm:px-5">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-lg bg-white/[0.04] text-fg-2">
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+            <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+            <circle cx="12" cy="10" r="2.25" />
+          </svg>
+        </span>
+        <span className="text-[15px] text-fg">{t.mapLabel}</span>
+        <a
+          href={map.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group ml-auto inline-flex items-center gap-1.5 text-[14px] text-fg-2 transition-colors hover:text-fg"
+        >
+          <span className="hidden sm:inline">{t.mapOpen}</span>
+          <span className="sm:hidden">{t.mapOpen.split(" ")[0]}</span>
+          <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4 shrink-0 text-fg-3 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-fg" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M5 11 11 5M6 5h5v5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </a>
+      </figcaption>
+    </figure>
   );
 }

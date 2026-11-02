@@ -290,6 +290,9 @@ const ru = {
     button: "Оставить заявку",
     telegram: "Telegram",
     phone: "Телефон",
+    mapLabel: "Мы на карте",
+    mapOpen: "Открыть в Яндекс Картах",
+    mapTitle: "Карта: как нас найти",
   },
 
   footer: {

@@ -1,16 +1,23 @@
 "use client";
 
+import { API_ORIGIN, STATIC_SITE } from "@/lib/deploy";
 import { ADMIN_OPEN_EVENT } from "./events";
 
 /**
  * The quiet "special button" in the footer's bottom bar: a small key glyph.
  * Opens the login dialog, or the admin bar when already signed in.
+ * On the GitHub Pages copy it leads to the same page on the Vercel server.
  */
 export function AdminLauncher({ label }: { label: string }) {
   return (
     <button
       type="button"
-      onClick={() => window.dispatchEvent(new Event(ADMIN_OPEN_EVENT))}
+      onClick={() => {
+        // The GitHub Pages copy has no server: admin mode lives on the Vercel address.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- another site (Vercel)
+        if (STATIC_SITE) window.location.href = `${API_ORIGIN}/${document.documentElement.lang || "ru"}?admin`;
+        else window.dispatchEvent(new Event(ADMIN_OPEN_EVENT));
+      }}
       aria-label={label}
       title={label}
       className="group grid size-8 place-items-center rounded-[5px] border border-transparent text-fg-3/70 transition-[color,border-color,background-color] duration-200 hover:border-line-strong hover:bg-surface-2 hover:text-fg"

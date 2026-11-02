@@ -9,7 +9,7 @@ export type ContentOverrides = {
   texts: Partial<Record<Locale, Record<string, string>>>;
   media: Partial<Record<MediaId, string>>;
   fonts: FontChoice;
-  /** Telegram username, phone and the Yandex Maps reviews link. */
+  /** Telegram username, phone, the Yandex Maps reviews link and the map. */
   settings: ContactSettings;
   updatedAt?: string;
 };
@@ -22,5 +22,5 @@ export type ContentPatch = {
   texts?: Record<string, string | null>;
   media?: Partial<Record<MediaId, string | null>>;
   fonts?: { sans?: string | null; heading?: string | null };
-  settings?: { telegram?: string | null; phone?: string | null; reviews?: string | null };
+  settings?: { telegram?: string | null; phone?: string | null; reviews?: string | null; map?: string | null };
 };

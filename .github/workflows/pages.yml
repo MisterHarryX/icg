@@ -1,0 +1,89 @@
+# Static copy of the site on GitHub Pages (icg-xi.ru).
+# Forms, the Telegram bot and admin mode stay on Vercel (icg-xi.vercel.app);
+# see scripts/build-pages.mjs.
+name: GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  # Sent by the Vercel server when the admin presses "Опубликовать" (lib/pagesRebuild.ts).
+  repository_dispatch:
+    types: [content-published]
+  # Safety net: picks up published edits even without the token above.
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  API_ORIGIN: https://icg-xi.vercel.app
+  SITE_URL: https://icg-xi.ru
+
+jobs:
+  check:
+    name: New content?
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Content version on the server
+        id: version
+        run: |
+          version=$(curl -fsS --retry 3 --max-time 30 "$API_ORIGIN/api/site-content" | sha256sum | cut -c1-16)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Already published?
+        id: seen
+        uses: actions/cache/restore@v4
+        with:
+          path: .content-version
+          key: pages-content-${{ steps.version.outputs.version }}
+          lookup-only: true
+      - name: Decide
+        id: decide
+        run: |
+          # Scheduled runs only rebuild when the content changed; everything else always builds.
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ steps.seen.outputs.cache-hit }}" = "true" ]; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build and publish
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build the static site
+        run: npm run build:pages
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+      - name: Publish
+        id: deploy
+        uses: actions/deploy-pages@v4
+      - name: Remember the published content
+        run: echo "${{ needs.check.outputs.version }}" > .content-version
+      - uses: actions/cache/save@v4
+        with:
+          path: .content-version
+          key: pages-content-${{ needs.check.outputs.version }}

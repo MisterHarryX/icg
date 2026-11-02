@@ -1,6 +1,6 @@
 import "server-only";
 import { ADMIN_TZ } from "@/lib/admin/env";
-import { SITE_URL } from "@/lib/site";
+import { SERVER_URL } from "@/lib/site";
 import {
   SERVICE_EMOJI,
   SERVICE_LABELS,
@@ -72,7 +72,7 @@ export function managerKeyboard(lead: Lead): InlineButton[][] {
   const links: InlineButton[] = [];
   const username = lead.client?.username ?? lead.contact.match(/^@([A-Za-z0-9_]{4,32})$/)?.[1];
   if (username) links.push({ text: "💬 Написать", url: `https://t.me/${username}` });
-  if (SITE_URL.startsWith("https://")) links.push({ text: "🔗 В админке", url: `${SITE_URL}/admin/leads?id=${lead.id}` });
+  if (SERVER_URL.startsWith("https://")) links.push({ text: "🔗 В админке", url: `${SERVER_URL}/admin/leads?id=${lead.id}` });
   if (links.length) rows.push(links);
   return rows;
 }

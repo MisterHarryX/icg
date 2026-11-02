@@ -2,6 +2,7 @@
 
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import type { Locale } from "@/lib/i18n/config";
+import { STATIC_SITE } from "@/lib/deploy";
 import { ADMIN_OPEN_EVENT, hasAdminHint } from "./events";
 
 // Admin code only downloads for the admin, never for visitors.
@@ -16,7 +17,7 @@ export function AdminHost({ locale }: { locale: Locale }) {
 
   // Restore the bar after a reload if the session is still valid.
   useEffect(() => {
-    if (!hasAdminHint()) return;
+    if (STATIC_SITE || !hasAdminHint()) return;
     let cancelled = false;
     fetch("/api/admin/session", { cache: "no-store" })
       .then((response) => response.json())
@@ -43,6 +44,17 @@ export function AdminHost({ locale }: { locale: Locale }) {
     }
     window.addEventListener(ADMIN_OPEN_EVENT, open);
     return () => window.removeEventListener(ADMIN_OPEN_EVENT, open);
+  }, []);
+
+  // Arriving from the footer key on the GitHub Pages copy (…/ru?admin): open sign-in right away
+  // (a saved session restores the bar on its own, above).
+  useEffect(() => {
+    if (STATIC_SITE) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("admin")) return;
+    url.searchParams.delete("admin");
+    window.history.replaceState(window.history.state, "", url);
+    if (!hasAdminHint()) window.dispatchEvent(new Event(ADMIN_OPEN_EVENT));
   }, []);
 
   const hide = useCallback(() => {

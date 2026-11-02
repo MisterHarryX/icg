@@ -291,6 +291,9 @@ const en: Messages = {
     button: "Start a project",
     telegram: "Telegram",
     phone: "Phone",
+    mapLabel: "Find us",
+    mapOpen: "Open in Yandex Maps",
+    mapTitle: "Map: how to find us",
   },
 
   footer: {

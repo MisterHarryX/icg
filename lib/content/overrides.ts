@@ -1,4 +1,5 @@
 import "server-only";
+import { readFile } from "node:fs/promises";
 import { cache } from "react";
 import { del, list, put } from "@vercel/blob";
 import { CONTENT_BACKEND } from "@/lib/admin/backend";
@@ -21,7 +22,12 @@ async function latestBlobVersions() {
   return blobs.sort((a, b) => b.pathname.localeCompare(a.pathname));
 }
 
+/** GitHub Pages build: content pulled from the Vercel server by scripts/build-pages.mjs. */
+const STATIC_CONTENT_FILE = process.env.ICG_STATIC_CONTENT;
+
 async function readStored(): Promise<Partial<ContentOverrides>> {
+  // No fallback here: a static copy built without the published content would quietly lose the admin's edits.
+  if (STATIC_CONTENT_FILE) return (JSON.parse(await readFile(STATIC_CONTENT_FILE, "utf8")) as { overrides: Partial<ContentOverrides> }).overrides;
   try {
     if (CONTENT_BACKEND === "files") return await readJson<Partial<ContentOverrides>>(FILE, EMPTY_OVERRIDES);
     if (CONTENT_BACKEND === "redis") {

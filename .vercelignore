@@ -6,3 +6,5 @@
 node_modules
 *.tsbuildinfo
 .claude
+.pages-stash
+out

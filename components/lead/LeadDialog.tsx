@@ -5,6 +5,7 @@ import type { Messages } from "@/messages/ru";
 import { Button } from "@/components/ui/Button";
 import { LogoMark } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
+import { apiUrl } from "@/lib/deploy";
 
 const SERVICES = ["business", "beauty", "redesign", "other"] as const;
 type Service = (typeof SERVICES)[number];
@@ -72,9 +73,11 @@ export function LeadDialog({ t, locale, botUrl }: { t: Messages["lead"]; locale:
 
     setState({ kind: "sending" });
     try {
-      const response = await fetch("/api/leads", {
+      const response = await fetch(apiUrl("/api/leads"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // A slow connection should end in the "write us in Telegram" message, not an endless spinner.
+        signal: AbortSignal.timeout(25_000),
         body: JSON.stringify({ name, contact, service, message: data.get("message"), website: data.get("website"), locale }),
       });
       const result = (await response.json().catch(() => ({}))) as { number?: string; trackUrl?: string | null; error?: string; field?: Field };

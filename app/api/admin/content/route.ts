@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminRequest, sameOrigin } from "@/lib/admin/auth";
-import { isValidPhone, parseReviewsUrl, parseTelegramUsername } from "@/lib/constants/contacts";
+import { isValidPhone, parseReviewsUrl, parseTelegramUsername, parseYandexMap } from "@/lib/constants/contacts";
 import { isFontId } from "@/lib/content/fonts";
 import { MEDIA_URL_PATTERN, isMediaId } from "@/lib/content/media";
 import { StorageUnavailableError, getFreshOverrides, getOverrides, saveOverrides } from "@/lib/content/overrides";
@@ -9,6 +9,7 @@ import { flattenMessages } from "@/lib/content/paths";
 import type { ContentPatch } from "@/lib/content/types";
 import { isLocale } from "@/lib/i18n/config";
 import { getBaseMessages } from "@/lib/i18n/messages";
+import { requestPagesRebuild } from "@/lib/pagesRebuild";
 
 const MAX_TEXT = 4000;
 
@@ -86,6 +87,13 @@ export async function PUT(request: NextRequest) {
     if (!url) return NextResponse.json({ error: "reviews" }, { status: 400 });
     settings.reviews = url;
   }
+  const map = patch.settings?.map;
+  if (map === null || map === "") delete settings.map;
+  else if (typeof map === "string") {
+    const url = parseYandexMap(map);
+    if (!url) return NextResponse.json({ error: "map" }, { status: 400 });
+    settings.map = url;
+  }
 
   try {
     await saveOverrides({ texts: { ...overrides.texts, [patch.locale]: texts }, media, fonts, settings });
@@ -95,6 +103,8 @@ export async function PUT(request: NextRequest) {
   }
   // Both locales share media and fonts, so re-render every page under [locale].
   revalidatePath("/[locale]", "layout");
+  // The GitHub Pages copy of the site is rebuilt from the new content.
+  const pages = await requestPagesRebuild();
 
-  return NextResponse.json({ ok: true, overrides: await getFreshOverrides() });
+  return NextResponse.json({ ok: true, overrides: await getFreshOverrides(), pages });
 }

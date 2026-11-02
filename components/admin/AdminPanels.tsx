@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { isValidPhone, parseReviewsUrl, parseTelegramUsername } from "@/lib/constants/contacts";
+import { isValidPhone, parseReviewsUrl, parseTelegramUsername, parseYandexMap } from "@/lib/constants/contacts";
 import { FONT_OPTIONS, fontStack, type FontId } from "@/lib/content/fonts";
 import { MEDIA_SLOTS, type MediaId } from "@/lib/content/media";
 import { cn } from "@/lib/utils";
@@ -324,13 +324,15 @@ export function ContactsPanel({
   telegram,
   phone,
   reviews,
+  map,
   onApply,
   onClose,
 }: {
   telegram: string;
   phone: string;
   reviews: string;
-  onApply: (telegram: string, phone: string, reviews: string) => void;
+  map: string;
+  onApply: (telegram: string, phone: string, reviews: string, map: string) => void;
   onClose: () => void;
 }) {
   const [telegramValue, setTelegramValue] = useState(`@${telegram}`);
@@ -340,6 +342,9 @@ export function ContactsPanel({
   const phoneOk = isValidPhone(phoneValue);
   const reviewsUrl = reviewsValue.trim() ? parseReviewsUrl(reviewsValue) : "";
   const reviewsOk = reviewsUrl !== null;
+  const [mapValue, setMapValue] = useState(map);
+  const mapUrl = mapValue.trim() ? parseYandexMap(mapValue) : "";
+  const mapOk = mapUrl !== null;
   const field =
     "mt-2 h-10 w-full rounded-[5px] border bg-bg/70 px-3 text-[16px] text-fg sm:text-[14px] focus:border-blue/70 focus:outline-none";
 
@@ -349,8 +354,8 @@ export function ContactsPanel({
         className="grid gap-4 p-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (telegramName && phoneOk && reviewsOk) {
-            onApply(telegramName, phoneValue.trim(), reviewsUrl ?? "");
+          if (telegramName && phoneOk && reviewsOk && mapOk) {
+            onApply(telegramName, phoneValue.trim(), reviewsUrl ?? "", mapUrl ?? "");
             onClose();
           }
         }}
@@ -398,9 +403,26 @@ export function ContactsPanel({
               : "Нужна ссылка на Яндекс Карты: организация → Отзывы → Поделиться."}
           </span>
         </label>
+        <label className="block">
+          <span className="eyebrow">Яндекс Карты</span>
+          <input
+            value={mapValue}
+            onChange={(event) => setMapValue(event.target.value)}
+            placeholder="https://yandex.ru/maps/org/…"
+            inputMode="url"
+            autoComplete="off"
+            spellCheck={false}
+            className={cn(field, mapOk ? "border-line-strong" : "border-weak/60")}
+          />
+          <span className={cn("mt-1.5 block text-[12px] leading-snug", mapOk ? "text-fg-3" : "text-weak")}>
+            {mapOk
+              ? "Карта в блоке «Контакты». Подойдёт ссылка «Поделиться» или код для вставки. Пустое поле — карты нет."
+              : "Нужна ссылка на Яндекс Карты (Поделиться → Скопировать) или код для вставки."}
+          </span>
+        </label>
         <p className="text-[12px] leading-relaxed text-fg-3">
           Меняется везде: в блоке «Контакты», в подвале и во всех кнопках «Написать в Telegram». Новая кнопка «Отзывы»
-          появится после публикации.
+          и карта появятся после публикации.
         </p>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="h-9 rounded-[5px] px-3 text-[13px] text-fg-2 hover:bg-surface-2 hover:text-fg">
@@ -408,7 +430,7 @@ export function ContactsPanel({
           </button>
           <button
             type="submit"
-            disabled={!telegramName || !phoneOk || !reviewsOk}
+            disabled={!telegramName || !phoneOk || !reviewsOk || !mapOk}
             className="h-9 rounded-[5px] bg-blue px-4 text-[13px] font-medium text-white transition-[background-color,transform] duration-[120ms] hover:bg-[#4a86ff] active:scale-[0.97] disabled:opacity-40"
           >
             Применить

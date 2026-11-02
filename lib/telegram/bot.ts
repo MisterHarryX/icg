@@ -25,7 +25,7 @@ import {
   leadNumber,
   type LeadService,
 } from "@/lib/leads/types";
-import { SITE_URL } from "@/lib/site";
+import { SERVER_URL, SITE_URL } from "@/lib/site";
 import {
   answerCallback,
   botUsername,
@@ -54,7 +54,8 @@ import { consumeBindCode, getGroup, isManagersChat, setGroup } from "./settings"
  */
 
 const SITE_HTTPS = SITE_URL.startsWith("https://");
-const BANNER_URL = process.env.TELEGRAM_BANNER_URL || (SITE_HTTPS ? `${SITE_URL}/ru/opengraph-image` : "");
+// The banner is drawn by the server (the static copy of the site has no image endpoint).
+const BANNER_URL = process.env.TELEGRAM_BANNER_URL || (SERVER_URL.startsWith("https://") ? `${SERVER_URL}/ru/opengraph-image` : "");
 
 // --- Request form state (per user, 1 hour) -------------------------------------------
 
