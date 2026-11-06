@@ -17,6 +17,8 @@ export function generateStaticParams() {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+  // Yandex Webmaster ownership check: keep it, removing it drops the site's access.
+  verification: { yandex: "e46e10864c558bd3" },
 };
 
 export const viewport: Viewport = {
